@@ -85,6 +85,8 @@ export function useForceGraph({
       existingMap.set(n.id, n);
     }
 
+    const nodeSetChanged = graphNodesRef.current.length !== nodes.length;
+
     const graphNodes: GraphNode[] = nodes.map((fn) => {
       const existing = existingMap.get(fn.id);
       const pinned = canvasLayout.positions.find((p) => p.functionId === fn.id);
@@ -96,6 +98,10 @@ export function useForceGraph({
         } else {
           existing.fx = undefined;
           existing.fy = undefined;
+          if (nodeSetChanged) {
+            existing.x = width / 2 + (Math.random() - 0.5) * 120;
+            existing.y = height / 2 + (Math.random() - 0.5) * 120;
+          }
         }
         return existing;
       }
