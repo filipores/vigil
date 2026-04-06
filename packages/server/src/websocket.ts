@@ -2,7 +2,7 @@ import type { Hono } from 'hono';
 import type { WSContext } from 'hono/ws';
 import { createNodeWebSocket } from '@hono/node-ws';
 import type { WsMessage } from '@agent-monitor/types';
-import { getAllFunctions, getAllFiles, upsertFunction, removeFunction, upsertFile } from './store.js';
+import { getAllFunctions, getAllFiles, getAllEdges, upsertFunction, removeFunction, upsertFile, upsertFileEdges } from './store.js';
 
 type ClientType = 'sdk' | 'dashboard';
 
@@ -28,7 +28,7 @@ export function setupWebSocket(app: Hono) {
         clientTypes.set(ws, 'dashboard');
         const snapshot: WsMessage = {
           type: 'state-snapshot',
-          payload: { functions: getAllFunctions(), files: getAllFiles() },
+          payload: { functions: getAllFunctions(), files: getAllFiles(), edges: getAllEdges() },
         };
         ws.send(JSON.stringify(snapshot));
         return;
@@ -57,6 +57,9 @@ function handleSdkMessage(msg: WsMessage): void {
       break;
     case 'file-changed':
       upsertFile(msg.payload);
+      break;
+    case 'edges-updated':
+      upsertFileEdges(msg.payload.filePath, msg.payload.edges);
       break;
   }
   broadcast(msg);
