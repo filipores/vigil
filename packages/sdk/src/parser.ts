@@ -3,6 +3,7 @@ import { parseSync } from '@swc/core';
 import type { FunctionInfo } from '@agent-monitor/types';
 import { generateId } from './utils.js';
 import { extractJsDoc, extractParamType, extractReturnType, SourceMapper } from './extractor.js';
+import { categorize } from './categorize.js';
 
 function getSourcePreview(source: string, startOffset: number, maxLines: number = 15): string {
   const rest = source.slice(startOffset);
@@ -45,6 +46,7 @@ function extractFunction(
     jsdoc,
     sourcePreview,
     lastModified: Date.now(),
+    category: categorize(name, filePath, !!node.async, false),
   };
 }
 
@@ -85,6 +87,7 @@ function extractFromArrowOrFnExpr(
     jsdoc,
     sourcePreview,
     lastModified: Date.now(),
+    category: categorize(name, filePath, !!init.async, false),
   };
 }
 
@@ -164,6 +167,7 @@ function walkNode(
             jsdoc,
             sourcePreview,
             lastModified: Date.now(),
+            category: categorize(fullName, filePath, !!fn.async, true),
           });
         }
       }
