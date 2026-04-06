@@ -1,6 +1,8 @@
 export type { FunctionParam, FunctionInfo, FunctionCategory } from './function.js';
 export type { GitCommit, DiffLine, DiffLineType, FileDiff, CommitDiff } from './git.js';
-export type { DataFlowEdge } from './dataflow.js';
+export type { DataFlowEdge, EdgeType } from './dataflow.js';
+export type { CanvasLayout, PinnedPosition, CanvasGroup, CanvasAnnotation } from './canvas.js';
+export type { CanvasCommand, CreateGroupCommand, AddToGroupCommand, MoveNodeCommand, AddAnnotationCommand, ClearGroupCommand } from './canvas-command.js';
 export type { FileChangeType, FileChange } from './file.js';
 export type { AgentContext, AgentCommand } from './command.js';
 export type {
@@ -9,5 +11,6 @@ export type {
   WsFunctionRemoved,
   WsFileChanged,
   WsStateSnapshot,
+  WsEdgesUpdated,
   WsMessage,
 } from './messages.js';

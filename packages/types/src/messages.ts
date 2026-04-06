@@ -1,5 +1,6 @@
 import type { FunctionInfo } from './function.js';
 import type { FileChange } from './file.js';
+import type { DataFlowEdge } from './dataflow.js';
 
 export interface WsFunctionDiscovered {
   type: 'function-discovered';
@@ -26,6 +27,15 @@ export interface WsStateSnapshot {
   payload: {
     functions: FunctionInfo[];
     files: FileChange[];
+    edges: DataFlowEdge[];
+  };
+}
+
+export interface WsEdgesUpdated {
+  type: 'edges-updated';
+  payload: {
+    filePath: string;
+    edges: DataFlowEdge[];
   };
 }
 
@@ -34,4 +44,5 @@ export type WsMessage =
   | WsFunctionUpdated
   | WsFunctionRemoved
   | WsFileChanged
-  | WsStateSnapshot;
+  | WsStateSnapshot
+  | WsEdgesUpdated;
