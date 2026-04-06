@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { parseSync } from '@swc/core';
-import type { FunctionInfo } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge } from '@agent-monitor/types';
 import { generateId } from './utils.js';
 import { extractJsDoc, extractParamType, extractReturnType, SourceMapper } from './extractor.js';
 import { categorize } from './categorize.js';
@@ -176,7 +176,124 @@ function walkNode(
   }
 }
 
-export async function parseFile(filePath: string): Promise<FunctionInfo[]> {
+function collectCallsInBody(node: unknown, calls: Set<string>): void {
+  if (!node || typeof node !== 'object') return;
+
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectCallsInBody(item, calls);
+    }
+    return;
+  }
+
+  const obj = node as Record<string, unknown>;
+
+  if (obj.type === 'CallExpression') {
+    const callee = obj.callee as Record<string, unknown> | undefined;
+    if (callee) {
+      if (callee.type === 'Identifier') {
+        calls.add(callee.value as string);
+      } else if (callee.type === 'MemberExpression') {
+        const prop = callee.property as Record<string, unknown> | undefined;
+        if (prop?.value) calls.add(prop.value as string);
+      }
+    }
+  }
+
+  for (const key of Object.keys(obj)) {
+    if (key === 'span' || key === 'type') continue;
+    collectCallsInBody(obj[key], calls);
+  }
+}
+
+function extractCallEdges(
+  functions: FunctionInfo[],
+  body: AstNode[],
+  filePath: string,
+): DataFlowEdge[] {
+  const nameToId = new Map<string, string>();
+  for (const fn of functions) {
+    // For class methods like "Foo.bar", index by the short name "bar" as well
+    nameToId.set(fn.name, fn.id);
+  }
+
+  const edges: DataFlowEdge[] = [];
+
+  for (const node of body) {
+    // Determine which function(s) this top-level node declares
+    const fnEntries: { name: string; bodyNode: unknown }[] = [];
+
+    const unwrapped =
+      node.type === 'ExportNamedDeclaration' || node.type === 'ExportDeclaration'
+        ? (node.declaration ?? node.decl ?? node)
+        : node.type === 'ExportDefaultDeclaration'
+          ? (node.decl ?? node)
+          : node;
+
+    const inner = unwrapped as AstNode;
+
+    switch (inner.type) {
+      case 'FunctionDeclaration': {
+        const name = inner.identifier?.value ?? inner.id?.value;
+        if (name) fnEntries.push({ name, bodyNode: inner.body });
+        break;
+      }
+      case 'VariableDeclaration': {
+        const declarations: AstNode[] = inner.declarations ?? [];
+        for (const decl of declarations) {
+          if (
+            decl.type === 'VariableDeclarator' &&
+            decl.init &&
+            decl.id?.value &&
+            (decl.init.type === 'ArrowFunctionExpression' ||
+              decl.init.type === 'FunctionExpression')
+          ) {
+            fnEntries.push({ name: decl.id.value, bodyNode: decl.init.body });
+          }
+        }
+        break;
+      }
+      case 'ClassDeclaration': {
+        const className = inner.identifier?.value ?? 'Anonymous';
+        const bodyMembers: AstNode[] = inner.body ?? [];
+        for (const member of bodyMembers) {
+          if (member.type === 'ClassMethod' || member.type === 'Constructor') {
+            const methodName = member.key?.value ?? member.key?.raw ?? 'constructor';
+            const fullName = `${className}.${methodName}`;
+            const fn = member.function ?? member;
+            fnEntries.push({ name: fullName, bodyNode: fn.body });
+          }
+        }
+        break;
+      }
+    }
+
+    for (const { name, bodyNode } of fnEntries) {
+      const callerId = nameToId.get(name);
+      if (!callerId) continue;
+
+      const calls = new Set<string>();
+      collectCallsInBody(bodyNode, calls);
+
+      for (const calleeName of calls) {
+        const calleeId = nameToId.get(calleeName);
+        if (calleeId && calleeId !== callerId) {
+          edges.push({
+            sourceId: callerId,
+            targetId: calleeId,
+            label: calleeName,
+            edgeType: 'call',
+            filePath,
+          });
+        }
+      }
+    }
+  }
+
+  return edges;
+}
+
+export async function parseFile(filePath: string): Promise<{ functions: FunctionInfo[]; edges: DataFlowEdge[] }> {
   const source = await readFile(filePath, 'utf-8');
   const isTsx = filePath.endsWith('.tsx') || filePath.endsWith('.jsx');
 
@@ -193,5 +310,7 @@ export async function parseFile(filePath: string): Promise<FunctionInfo[]> {
     walkNode(node as AstNode, source, filePath, mapper, results);
   }
 
-  return results;
+  const edges = extractCallEdges(results, module.body as AstNode[], filePath);
+
+  return { functions: results, edges };
 }

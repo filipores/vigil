@@ -1,6 +1,6 @@
 import chokidar from 'chokidar';
 import path from 'node:path';
-import type { FunctionInfo } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge } from '@agent-monitor/types';
 import { parseFile } from './parser.js';
 import { normalizePath } from './utils.js';
 import type { WsClient } from './client.js';
@@ -14,6 +14,7 @@ export interface WatcherOptions {
 export class FileWatcher {
   private watcher: chokidar.FSWatcher | null = null;
   private fileFunctions = new Map<string, FunctionInfo[]>();
+  private fileEdges = new Map<string, DataFlowEdge[]>();
   private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private client: WsClient;
   private options: WatcherOptions;
@@ -55,8 +56,11 @@ export class FileWatcher {
   private async handleFileChange(relativePath: string): Promise<void> {
     const absPath = normalizePath(path.join(this.options.root, relativePath));
     let newFunctions: FunctionInfo[];
+    let newEdges: DataFlowEdge[];
     try {
-      newFunctions = await parseFile(absPath);
+      const result = await parseFile(absPath);
+      newFunctions = result.functions;
+      newEdges = result.edges;
     } catch {
       return; // Skip unparseable files
     }
@@ -103,6 +107,13 @@ export class FileWatcher {
 
     this.fileFunctions.set(absPath, newFunctions);
 
+    // Send edges
+    this.client.send({
+      type: 'edges-updated',
+      payload: { filePath: absPath, edges: newEdges },
+    });
+    this.fileEdges.set(absPath, newEdges);
+
     // Send file-changed message
     const changeType = prev ? 'modified' : 'added';
     this.client.send({
@@ -133,6 +144,8 @@ export class FileWatcher {
         },
       });
       this.fileFunctions.delete(absPath);
+      this.fileEdges.delete(absPath);
+      this.client.send({ type: 'edges-updated', payload: { filePath: absPath, edges: [] } });
     }
   }
 
