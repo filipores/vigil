@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { FunctionInfo } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge, CanvasLayout } from '@agent-monitor/types';
 import {
   forceSimulation,
   forceManyBody,
   forceCenter,
   forceCollide,
+  forceLink,
   type Simulation,
   type SimulationNodeDatum,
 } from 'd3';
@@ -15,18 +16,21 @@ interface GraphNode extends SimulationNodeDatum {
   id: string;
   name: string;
   opacity: number;
-  age: number; // ticks since creation — drives pulse
+  age: number;
 }
 
 interface UseForceGraphOptions {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   nodes: FunctionInfo[];
+  edges: DataFlowEdge[];
+  canvasLayout: CanvasLayout;
   selectedId: string | null;
   highlightedIds?: Set<string>;
   onNodeClick: (id: string) => void;
+  canvasMode?: boolean;
+  onNodeDrag?: (id: string, x: number, y: number) => void;
 }
 
-// Colors from the design system
 const VOID = '#1e1e24';
 const GRID_DOT = 'rgba(255, 255, 255, 0.035)';
 const NODE_BG = 'rgba(255, 255, 255, 0.06)';
@@ -38,6 +42,11 @@ const SIGNAL_GLOW = 'rgba(80, 200, 200, 0.08)';
 const LABEL_COLOR = 'rgba(255, 255, 255, 0.55)';
 const LABEL_SELECTED = 'rgba(255, 255, 255, 0.85)';
 
+const WARM_BG = 'rgba(200, 170, 80, 0.10)';
+const WARM_BORDER = 'rgba(200, 170, 80, 0.5)';
+const WARM_DOT = 'rgba(200, 170, 80, 0.8)';
+const WARM_LABEL = 'rgba(200, 170, 80, 0.85)';
+
 function drawDotGrid(ctx: CanvasRenderingContext2D, w: number, h: number) {
   const spacing = 24;
   ctx.fillStyle = GRID_DOT;
@@ -48,13 +57,17 @@ function drawDotGrid(ctx: CanvasRenderingContext2D, w: number, h: number) {
   }
 }
 
-// Warm highlight colors
-const WARM_BG = 'rgba(200, 170, 80, 0.10)';
-const WARM_BORDER = 'rgba(200, 170, 80, 0.5)';
-const WARM_DOT = 'rgba(200, 170, 80, 0.8)';
-const WARM_LABEL = 'rgba(200, 170, 80, 0.85)';
-
-export function useForceGraph({ canvasRef, nodes, selectedId, highlightedIds, onNodeClick }: UseForceGraphOptions) {
+export function useForceGraph({
+  canvasRef,
+  nodes,
+  edges,
+  canvasLayout,
+  selectedId,
+  highlightedIds,
+  onNodeClick,
+  canvasMode,
+  onNodeDrag,
+}: UseForceGraphOptions) {
   const simRef = useRef<Simulation<GraphNode, never> | null>(null);
   const graphNodesRef = useRef<GraphNode[]>([]);
 
@@ -74,8 +87,16 @@ export function useForceGraph({ canvasRef, nodes, selectedId, highlightedIds, on
 
     const graphNodes: GraphNode[] = nodes.map((fn) => {
       const existing = existingMap.get(fn.id);
+      const pinned = canvasLayout.positions.find((p) => p.functionId === fn.id);
       if (existing) {
         existing.name = fn.name;
+        if (pinned) {
+          existing.fx = pinned.x;
+          existing.fy = pinned.y;
+        } else {
+          existing.fx = undefined;
+          existing.fy = undefined;
+        }
         return existing;
       }
       return {
@@ -83,6 +104,8 @@ export function useForceGraph({ canvasRef, nodes, selectedId, highlightedIds, on
         name: fn.name,
         x: width / 2 + (Math.random() - 0.5) * 120,
         y: height / 2 + (Math.random() - 0.5) * 120,
+        fx: pinned ? pinned.x : undefined,
+        fy: pinned ? pinned.y : undefined,
         opacity: 0,
         age: 0,
       };
@@ -96,10 +119,23 @@ export function useForceGraph({ canvasRef, nodes, selectedId, highlightedIds, on
 
     const R = 22;
 
+    // Build link data for edges
+    const nodeIdSet = new Set(graphNodes.map((n) => n.id));
+    const linkData = edges
+      .filter((e) => nodeIdSet.has(e.sourceId) && nodeIdSet.has(e.targetId))
+      .map((e) => ({ source: e.sourceId, target: e.targetId, sourceId: e.sourceId, targetId: e.targetId }));
+
     const simulation = forceSimulation<GraphNode>(graphNodes)
       .force('charge', forceManyBody().strength(-180))
       .force('center', forceCenter(width / 2, height / 2).strength(0.05))
       .force('collide', forceCollide<GraphNode>(48))
+      .force(
+        'link',
+        forceLink(linkData)
+          .id((n: SimulationNodeDatum & { id?: string }) => (n as GraphNode).id)
+          .distance(120)
+          .strength(0.3),
+      )
       .on('tick', () => {
         const dpr = window.devicePixelRatio || 1;
         ctx.save();
@@ -114,6 +150,61 @@ export function useForceGraph({ canvasRef, nodes, selectedId, highlightedIds, on
         // Dot grid
         drawDotGrid(ctx, width, height);
 
+        // Draw groups
+        for (const group of canvasLayout.groups) {
+          ctx.save();
+          ctx.globalAlpha = 0.1;
+          ctx.fillStyle = group.color === 'warm' ? 'rgba(200,170,80,0.1)' : 'rgba(94,196,196,0.08)';
+          ctx.strokeStyle = group.color === 'warm' ? 'rgba(200,170,80,0.3)' : 'rgba(94,196,196,0.2)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(group.x, group.y, group.width, group.height, 8);
+          ctx.fill();
+          ctx.stroke();
+          ctx.globalAlpha = 0.6;
+          ctx.fillStyle = group.color === 'warm' ? 'rgba(200,170,80,0.85)' : 'rgba(94,196,196,0.7)';
+          ctx.font = '500 9px "IBM Plex Mono", monospace';
+          ctx.textAlign = 'left';
+          ctx.fillText(group.label, group.x + 8, group.y + 14);
+          ctx.restore();
+        }
+
+        // Draw annotations
+        for (const ann of canvasLayout.annotations) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(200,170,80,0.06)';
+          ctx.strokeStyle = 'rgba(200,170,80,0.2)';
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.roundRect(ann.x, ann.y, 140, 50, 4);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(200,170,80,0.7)';
+          ctx.font = '400 9px "IBM Plex Mono", monospace';
+          ctx.fillText(ann.text.slice(0, 60), ann.x + 6, ann.y + 16);
+          ctx.restore();
+        }
+
+        // Draw edges
+        for (const link of linkData) {
+          const src = typeof link.source === 'object' ? link.source : null;
+          const tgt = typeof link.target === 'object' ? link.target : null;
+          if (!src || !tgt) continue;
+          const sx = (src as SimulationNodeDatum).x ?? 0;
+          const sy = (src as SimulationNodeDatum).y ?? 0;
+          const tx = (tgt as SimulationNodeDatum).x ?? 0;
+          const ty = (tgt as SimulationNodeDatum).y ?? 0;
+          const isActive = link.sourceId === selectedId || link.targetId === selectedId;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(tx, ty);
+          ctx.strokeStyle = isActive ? 'rgba(94, 196, 196, 0.45)' : 'rgba(94, 196, 196, 0.12)';
+          ctx.lineWidth = isActive ? 1 : 0.5;
+          ctx.globalAlpha = isActive ? 0.8 : 0.4;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
         // Draw nodes
         for (const node of graphNodes) {
           if (node.opacity < 1) node.opacity = Math.min(1, node.opacity + 0.025);
@@ -126,7 +217,7 @@ export function useForceGraph({ canvasRef, nodes, selectedId, highlightedIds, on
 
           ctx.globalAlpha = node.opacity;
 
-          // Glow ring for new nodes (fades over first 120 ticks)
+          // Glow ring for new nodes
           if (node.age < 120) {
             const glowAlpha = (1 - node.age / 120) * 0.25;
             const glowR = R + 8 + (node.age / 120) * 12;
@@ -181,46 +272,116 @@ export function useForceGraph({ canvasRef, nodes, selectedId, highlightedIds, on
 
     simRef.current = simulation;
 
-    const handleClick = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+    if (canvasMode) {
+      let dragging: { nodeId: string; node: GraphNode } | null = null;
+      let moved = false;
 
-      for (const node of graphNodes) {
-        const dx = (node.x ?? 0) - mx;
-        const dy = (node.y ?? 0) - my;
-        if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
-          onNodeClick(node.id);
-          return;
+      const findNode = (mx: number, my: number): GraphNode | null => {
+        for (const node of graphNodes) {
+          const dx = (node.x ?? 0) - mx;
+          const dy = (node.y ?? 0) - my;
+          if (dx * dx + dy * dy < (R + 8) * (R + 8)) return node;
         }
-      }
-    };
+        return null;
+      };
 
-    const handleMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      let hovering = false;
-
-      for (const node of graphNodes) {
-        const dx = (node.x ?? 0) - mx;
-        const dy = (node.y ?? 0) - my;
-        if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
-          hovering = true;
-          break;
+      const onPointerDown = (e: PointerEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const node = findNode(mx, my);
+        if (node) {
+          dragging = { nodeId: node.id, node };
+          moved = false;
+          canvas.setPointerCapture(e.pointerId);
+          node.fx = node.x;
+          node.fy = node.y;
+          simulation.alphaTarget(0.3).restart();
         }
-      }
+      };
 
-      canvas.style.cursor = hovering ? 'pointer' : 'default';
-    };
+      const onPointerMove = (e: PointerEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
 
-    canvas.addEventListener('click', handleClick);
-    canvas.addEventListener('mousemove', handleMove);
+        if (dragging) {
+          dragging.node.fx = mx;
+          dragging.node.fy = my;
+          moved = true;
+        } else {
+          canvas.style.cursor = findNode(mx, my) ? 'grab' : 'default';
+        }
+      };
 
-    return () => {
-      simulation.stop();
-      canvas.removeEventListener('click', handleClick);
-      canvas.removeEventListener('mousemove', handleMove);
-    };
-  }, [canvasRef, nodes, selectedId, onNodeClick]);
+      const onPointerUp = (e: PointerEvent) => {
+        if (dragging) {
+          canvas.releasePointerCapture(e.pointerId);
+          simulation.alphaTarget(0);
+          if (!moved) {
+            onNodeClick(dragging.nodeId);
+          } else {
+            const finalX = dragging.node.fx ?? dragging.node.x ?? 0;
+            const finalY = dragging.node.fy ?? dragging.node.y ?? 0;
+            onNodeDrag?.(dragging.nodeId, finalX, finalY);
+          }
+          dragging = null;
+          moved = false;
+        }
+      };
+
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', onPointerUp);
+
+      return () => {
+        simulation.stop();
+        canvas.removeEventListener('pointerdown', onPointerDown);
+        canvas.removeEventListener('pointermove', onPointerMove);
+        canvas.removeEventListener('pointerup', onPointerUp);
+      };
+    } else {
+      const handleClick = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        for (const node of graphNodes) {
+          const dx = (node.x ?? 0) - mx;
+          const dy = (node.y ?? 0) - my;
+          if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
+            onNodeClick(node.id);
+            return;
+          }
+        }
+      };
+
+      const handleMove = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        let hovering = false;
+
+        for (const node of graphNodes) {
+          const dx = (node.x ?? 0) - mx;
+          const dy = (node.y ?? 0) - my;
+          if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
+            hovering = true;
+            break;
+          }
+        }
+
+        canvas.style.cursor = hovering ? 'pointer' : 'default';
+      };
+
+      canvas.addEventListener('click', handleClick);
+      canvas.addEventListener('mousemove', handleMove);
+
+      return () => {
+        simulation.stop();
+        canvas.removeEventListener('click', handleClick);
+        canvas.removeEventListener('mousemove', handleMove);
+      };
+    }
+  }, [canvasRef, nodes, edges, canvasLayout, selectedId, highlightedIds, onNodeClick, canvasMode, onNodeDrag]);
 }

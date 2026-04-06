@@ -1,6 +1,7 @@
 'use client';
 
-import type { FunctionInfo, AgentContext } from '@agent-monitor/types';
+import { useMemo } from 'react';
+import type { FunctionInfo, AgentContext, DataFlowEdge } from '@agent-monitor/types';
 import { CodePreview } from './CodePreview';
 
 interface DetailPanelProps {
@@ -9,9 +10,12 @@ interface DetailPanelProps {
   onClose: () => void;
   onAskAgent: (ctx: AgentContext) => void;
   onOpenEditor: () => void;
+  edges: DataFlowEdge[];
+  allFunctions: FunctionInfo[];
+  onSelectFunction: (id: string) => void;
 }
 
-export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor }: DetailPanelProps) {
+export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edges, allFunctions, onSelectFunction }: DetailPanelProps) {
   const handleAskAgent = () => {
     if (!fn) return;
     onAskAgent({
@@ -21,6 +25,28 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor }: D
       lineEnd: fn.line + fn.sourcePreview.split('\n').length - 1,
     });
   };
+
+  const callers = useMemo(
+    () =>
+      fn
+        ? edges
+            .filter((e) => e.targetId === fn.id)
+            .map((e) => allFunctions.find((f) => f.id === e.sourceId))
+            .filter((f): f is FunctionInfo => !!f)
+        : [],
+    [edges, fn, allFunctions],
+  );
+
+  const callees = useMemo(
+    () =>
+      fn
+        ? edges
+            .filter((e) => e.sourceId === fn.id)
+            .map((e) => allFunctions.find((f) => f.id === e.targetId))
+            .filter((f): f is FunctionInfo => !!f)
+        : [],
+    [edges, fn, allFunctions],
+  );
 
   if (!isOpen || !fn) return null;
 
@@ -52,6 +78,52 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor }: D
             </svg>
           </button>
         </div>
+
+        {/* Called by */}
+        {callers.length > 0 && (
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim mb-2">
+              Called by
+            </div>
+            <div className="space-y-0.5">
+              {callers.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => onSelectFunction(f.id)}
+                  className="block text-[11px] font-mono text-text-secondary hover:text-signal transition-colors"
+                >
+                  {f.name}
+                  <span className="text-text-dim ml-1 text-[10px]">
+                    {f.filePath.split('/').pop()}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Calls */}
+        {callees.length > 0 && (
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim mb-2">
+              Calls
+            </div>
+            <div className="space-y-0.5">
+              {callees.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => onSelectFunction(f.id)}
+                  className="block text-[11px] font-mono text-text-secondary hover:text-signal transition-colors"
+                >
+                  {f.name}
+                  <span className="text-text-dim ml-1 text-[10px]">
+                    {f.filePath.split('/').pop()}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Params */}
         {fn.params.length > 0 && (

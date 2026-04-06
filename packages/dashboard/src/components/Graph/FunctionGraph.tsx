@@ -1,17 +1,21 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import type { FunctionInfo } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge, CanvasLayout } from '@agent-monitor/types';
 import { useForceGraph } from './useForceGraph';
 
 interface FunctionGraphProps {
   functions: FunctionInfo[];
+  edges: DataFlowEdge[];
+  canvasLayout: CanvasLayout;
   selectedId: string | null;
   highlightedIds?: Set<string>;
   onSelectFunction: (id: string) => void;
+  onPinNode?: (id: string, x: number, y: number) => void;
+  canvasMode?: boolean;
 }
 
-export function FunctionGraph({ functions, selectedId, highlightedIds, onSelectFunction }: FunctionGraphProps) {
+export function FunctionGraph({ functions, edges, canvasLayout, selectedId, highlightedIds, onSelectFunction, onPinNode, canvasMode }: FunctionGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -40,7 +44,17 @@ export function FunctionGraph({ functions, selectedId, highlightedIds, onSelectF
     return () => observer.disconnect();
   }, []);
 
-  useForceGraph({ canvasRef, nodes: functions, selectedId, highlightedIds, onNodeClick: onSelectFunction });
+  useForceGraph({
+    canvasRef,
+    nodes: functions,
+    edges,
+    canvasLayout,
+    selectedId,
+    highlightedIds,
+    onNodeClick: onSelectFunction,
+    canvasMode,
+    onNodeDrag: onPinNode,
+  });
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-void">

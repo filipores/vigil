@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import type { FunctionInfo, FileChange, WsMessage } from '@agent-monitor/types';
+import type { FunctionInfo, FileChange, DataFlowEdge, WsMessage } from '@agent-monitor/types';
 import { useWebSocket } from './useWebSocket';
-import { fetchFunctions, fetchFiles } from '@/lib/api';
+import { fetchFunctions, fetchFiles, fetchEdges } from '@/lib/api';
 import { WS_URL } from '@/lib/constants';
 
 export function useFunctions() {
   const [functionsMap, setFunctionsMap] = useState<Map<string, FunctionInfo>>(new Map());
   const [files, setFiles] = useState<FileChange[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [edges, setEdges] = useState<DataFlowEdge[]>([]);
 
   useEffect(() => {
     fetchFunctions()
@@ -22,6 +23,10 @@ export function useFunctions() {
 
     fetchFiles()
       .then(setFiles)
+      .catch(() => {});
+
+    fetchEdges()
+      .then(setEdges)
       .catch(() => {});
   }, []);
 
@@ -51,6 +56,12 @@ export function useFunctions() {
           return [...prev, msg.payload];
         });
         break;
+      case 'edges-updated':
+        setEdges((prev) => [
+          ...prev.filter((e) => e.filePath !== msg.payload.filePath),
+          ...msg.payload.edges,
+        ]);
+        break;
       case 'state-snapshot':
         setFunctionsMap(() => {
           const map = new Map<string, FunctionInfo>();
@@ -58,6 +69,7 @@ export function useFunctions() {
           return map;
         });
         setFiles(msg.payload.files);
+        setEdges(msg.payload.edges ?? []);
         break;
     }
   }, []);
@@ -70,5 +82,5 @@ export function useFunctions() {
     setSelectedId(id);
   }, []);
 
-  return { functions, files, selectedId, selectFunction };
+  return { functions, files, edges, selectedId, selectFunction };
 }

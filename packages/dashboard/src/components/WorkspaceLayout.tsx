@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import type { AgentContext, FunctionCategory } from '@agent-monitor/types';
+import type { AgentContext, FunctionCategory, CanvasLayout } from '@agent-monitor/types';
 import { useFunctions } from '@/hooks/useFunctions';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useGitCommits } from '@/hooks/useGitCommits';
+import { useCanvasLayout } from '@/hooks/useCanvasLayout';
 import { WS_URL } from '@/lib/constants';
 import { SidebarTabs } from '@/components/Sidebar/SidebarTabs';
 import { FileTree } from '@/components/FileTree/FileTree';
@@ -14,16 +15,28 @@ import { CommitList } from '@/components/Commits/CommitList';
 import { DiffView } from '@/components/Commits/DiffView';
 import { DetailPanel } from '@/components/Detail/DetailPanel';
 import { AgentModal } from '@/components/Agent/AgentModal';
+import { CanvasAgentPanel } from '@/components/Agent/CanvasAgentPanel';
 import { openInEditor } from '@/lib/api';
 
+const EMPTY_CANVAS_LAYOUT: CanvasLayout = { version: 1, positions: [], groups: [], annotations: [] };
+
 export function WorkspaceLayout() {
-  const { functions, files, selectedId, selectFunction } = useFunctions();
+  const { functions, files, edges, selectedId, selectFunction } = useFunctions();
   const { connected } = useWebSocket({ url: WS_URL, onMessage: () => {} });
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [agentContext, setAgentContext] = useState<AgentContext | null>(null);
   const [sidebarTab, setSidebarTab] = useState<'files' | 'commits'>('files');
   const [selectedCategory, setSelectedCategory] = useState<FunctionCategory | null>(null);
+  const [canvasMode, setCanvasMode] = useState(false);
+  const [isCanvasAgentOpen, setIsCanvasAgentOpen] = useState(false);
+
+  const {
+    layout,
+    pinNode,
+    applyCommand,
+    clearLayout,
+  } = useCanvasLayout();
 
   const {
     commits,
@@ -92,6 +105,16 @@ export function WorkspaceLayout() {
           <span className="text-text-secondary text-[11px]">
             {functions.length} function{functions.length !== 1 ? 's' : ''} tracked
           </span>
+          <button
+            onClick={() => setCanvasMode((v) => !v)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded transition-colors ${
+              canvasMode
+                ? 'bg-signal/10 text-signal border border-signal/30'
+                : 'text-text-dim border border-border-subtle hover:text-text'
+            }`}
+          >
+            Canvas
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -105,6 +128,26 @@ export function WorkspaceLayout() {
           </span>
         </div>
       </header>
+
+      {/* Canvas toolbar */}
+      {canvasMode && (
+        <div className="flex items-center gap-2 h-8 px-5 border-b border-border-subtle bg-surface/50 shrink-0">
+          <button
+            onClick={clearLayout}
+            className="text-[10px] text-text-dim hover:text-text transition-colors"
+          >
+            Clear
+          </button>
+          <button
+            onClick={() => setIsCanvasAgentOpen((v) => !v)}
+            className={`text-[10px] transition-colors ${
+              isCanvasAgentOpen ? 'text-signal' : 'text-text-dim hover:text-text'
+            }`}
+          >
+            Agent
+          </button>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
@@ -153,9 +196,13 @@ export function WorkspaceLayout() {
           ) : (
             <FunctionGraph
               functions={filteredFunctions}
+              edges={edges}
+              canvasLayout={canvasMode ? layout : EMPTY_CANVAS_LAYOUT}
               selectedId={selectedId}
               highlightedIds={highlightedFunctionIds}
               onSelectFunction={handleSelectFunction}
+              onPinNode={canvasMode ? pinNode : undefined}
+              canvasMode={canvasMode}
             />
           )}
         </main>
@@ -168,6 +215,21 @@ export function WorkspaceLayout() {
             onClose={handleCloseDetail}
             onAskAgent={handleAskAgent}
             onOpenEditor={handleOpenEditor}
+            edges={edges}
+            allFunctions={functions}
+            onSelectFunction={handleSelectFunction}
+          />
+        )}
+
+        {/* Canvas agent panel */}
+        {canvasMode && isCanvasAgentOpen && (
+          <CanvasAgentPanel
+            isOpen={isCanvasAgentOpen}
+            onClose={() => setIsCanvasAgentOpen(false)}
+            onCommand={applyCommand}
+            functions={functions}
+            edges={edges}
+            layout={layout}
           />
         )}
       </div>

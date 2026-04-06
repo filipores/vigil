@@ -1,4 +1,4 @@
-import type { FunctionInfo, FileChange, AgentCommand, GitCommit, CommitDiff } from '@agent-monitor/types';
+import type { FunctionInfo, FileChange, AgentCommand, GitCommit, CommitDiff, DataFlowEdge, CanvasLayout } from '@agent-monitor/types';
 import { API_BASE } from './constants';
 
 export async function fetchFunctions(): Promise<FunctionInfo[]> {
@@ -40,4 +40,22 @@ export async function fetchCommitDiff(hash: string): Promise<CommitDiff | null> 
   const res = await fetch(`${API_BASE}/api/git/commits/${encodeURIComponent(hash)}/diff`);
   if (!res.ok) return null;
   return res.json();
+}
+
+export async function fetchEdges(): Promise<DataFlowEdge[]> {
+  const res = await fetch(`${API_BASE}/api/edges`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function runCanvasAgent(
+  prompt: string,
+  graph: { functions: FunctionInfo[]; edges: DataFlowEdge[]; canvasLayout: CanvasLayout },
+): Promise<ReadableStream<Uint8Array> | null> {
+  const res = await fetch(`${API_BASE}/api/agent/canvas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, graph }),
+  });
+  return res.body;
 }
