@@ -23,19 +23,18 @@ export async function getCommits(root: string, limit: number): Promise<GitCommit
   );
 
   const commits: GitCommit[] = [];
-  const blocks = raw.trim().split('\n\n');
+  let current: GitCommit | null = null;
 
-  for (const block of blocks) {
-    if (!block.trim()) continue;
-    const lines = block.split('\n');
-    const header = lines[0];
-    const parts = header.split('\x00');
-    if (parts.length < 5) continue;
-
-    const [fullHash, hash, message, author, date] = parts;
-    const filesChanged = lines.slice(1).filter((l) => l.trim().length > 0);
-
-    commits.push({ fullHash, hash, message, author, date, filesChanged });
+  for (const line of raw.trim().split('\n')) {
+    if (!line) continue;
+    const parts = line.split('\x00');
+    if (parts.length >= 5) {
+      const [fullHash, hash, message, author, date] = parts;
+      current = { fullHash, hash, message, author, date, filesChanged: [] };
+      commits.push(current);
+    } else if (current && line) {
+      current.filesChanged.push(line);
+    }
   }
 
   return commits;
