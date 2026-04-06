@@ -37,7 +37,7 @@ export async function fetchCommits(limit = 20): Promise<GitCommit[]> {
 }
 
 export async function fetchCommitDiff(hash: string): Promise<CommitDiff | null> {
-  const res = await fetch(`${API_BASE}/api/git/commits/${hash}/diff`);
+  const res = await fetch(`${API_BASE}/api/git/commits/${encodeURIComponent(hash)}/diff`);
   if (!res.ok) return null;
   return res.json();
 }

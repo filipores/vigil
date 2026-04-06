@@ -7,14 +7,14 @@ export function CodePreview({ code, startLine = 1 }: CodePreviewProps) {
   const lines = code.split('\n');
 
   return (
-    <pre className="bg-surface rounded-lg p-4 overflow-x-auto text-xs">
+    <pre className="bg-void rounded-md p-3 overflow-x-auto text-[11px] leading-[1.6] border border-border-subtle">
       <code>
         {lines.map((line, i) => (
-          <div key={i} className="flex">
-            <span className="text-text-muted select-none w-8 text-right mr-3 shrink-0">
+          <div key={i} className="flex hover:bg-surface-raised/30 -mx-1 px-1 rounded-sm transition-colors">
+            <span className="font-mono text-text-dim select-none w-7 text-right mr-3 shrink-0 tabular-nums">
               {startLine + i}
             </span>
-            <span className="text-text-primary">{line}</span>
+            <span className="font-mono text-text-secondary">{line || ' '}</span>
           </div>
         ))}
       </code>

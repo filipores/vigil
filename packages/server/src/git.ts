@@ -18,7 +18,7 @@ function run(args: string[], cwd: string): Promise<string> {
 
 export async function getCommits(root: string, limit: number): Promise<GitCommit[]> {
   const raw = await run(
-    ['log', '--format=%H|%h|%s|%an|%aI', '--name-only', '-n', String(limit)],
+    ['log', '--format=%H%x00%h%x00%s%x00%an%x00%aI', '--name-only', '-n', String(limit)],
     root,
   );
 
@@ -29,20 +29,10 @@ export async function getCommits(root: string, limit: number): Promise<GitCommit
     if (!block.trim()) continue;
     const lines = block.split('\n');
     const header = lines[0];
-    const parts = header.split('|');
+    const parts = header.split('\x00');
     if (parts.length < 5) continue;
 
-    const [fullHash, hash, message, author, date] = [
-      parts[0],
-      parts[1],
-      parts.slice(2, -2).join('|'),
-      parts[parts.length - 2],
-      parts[parts.length - 1],
-    ];
-
-    // The message may contain pipes, so we need to handle that:
-    // format is: fullHash|hash|message|author|date
-    // author and date never contain pipes, so split from the end
+    const [fullHash, hash, message, author, date] = parts;
     const filesChanged = lines.slice(1).filter((l) => l.trim().length > 0);
 
     commits.push({ fullHash, hash, message, author, date, filesChanged });

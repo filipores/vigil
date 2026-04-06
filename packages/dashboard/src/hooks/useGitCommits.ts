@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { FunctionInfo, GitCommit, CommitDiff } from '@agent-monitor/types';
 import { fetchCommits, fetchCommitDiff } from '@/lib/api';
 
@@ -10,6 +10,7 @@ export function useGitCommits(functions: FunctionInfo[]) {
   const [commitDiff, setCommitDiff] = useState<CommitDiff | null>(null);
   const [highlightedFunctionIds, setHighlightedFunctionIds] = useState<Set<string>>(new Set());
   const [isLoadingDiff, setIsLoadingDiff] = useState(false);
+  const latestRequestRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetchCommits().then(setCommits).catch(() => {});
@@ -20,8 +21,10 @@ export function useGitCommits(functions: FunctionInfo[]) {
       if (hash === selectedHash) return;
       setSelectedHash(hash);
       setIsLoadingDiff(true);
+      latestRequestRef.current = hash;
 
       const diff = await fetchCommitDiff(hash);
+      if (latestRequestRef.current !== hash) return;
       setCommitDiff(diff);
 
       if (diff) {

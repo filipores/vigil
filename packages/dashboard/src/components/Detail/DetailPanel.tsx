@@ -22,98 +22,113 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor }: D
     });
   };
 
+  if (!isOpen || !fn) return null;
+
+  const shortPath = fn.filePath.split('/').slice(-3).join('/');
+
   return (
-    <div
-      className="w-80 border-l border-border bg-background overflow-y-auto transition-all duration-200 ease-in-out"
-      style={{
-        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-        position: isOpen ? 'relative' : 'absolute',
-        right: 0,
-        top: 0,
-        bottom: 0,
-      }}
-    >
-      {fn && (
-        <div className="p-6 space-y-4">
-          <div className="flex items-start justify-between">
-            <h2 className="text-lg font-semibold">{fn.name}</h2>
-            <button
-              onClick={onClose}
-              className="text-text-muted hover:text-text-primary transition-all duration-200 ease-in-out"
-            >
-              ✕
-            </button>
-          </div>
-
-          <button
-            onClick={onOpenEditor}
-            className="text-xs text-text-muted hover:text-accent transition-all duration-200 ease-in-out"
-          >
-            {fn.filePath}:{fn.line}
-          </button>
-
-          {fn.params.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-                Parameters
-              </h3>
-              <div className="rounded-lg overflow-hidden border border-border">
-                {fn.params.map((p, i) => (
-                  <div
-                    key={p.name}
-                    className={`flex justify-between px-3 py-1.5 text-sm ${
-                      i % 2 === 0 ? 'bg-surface' : 'bg-background'
-                    }`}
-                  >
-                    <span>{p.name}</span>
-                    <span className="text-text-muted">{p.type}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Returns
-            </span>
-            <span className="ml-2 text-sm bg-surface-raised rounded px-2 py-0.5">
-              {fn.returnType}
-            </span>
-          </div>
-
-          {fn.jsdoc && (
-            <div>
-              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-                Documentation
-              </h3>
-              <p className="text-sm italic text-text-muted">{fn.jsdoc}</p>
-            </div>
-          )}
-
-          <div>
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Preview
-            </h3>
-            <CodePreview code={fn.sourcePreview} startLine={fn.line} />
-          </div>
-
-          <div className="flex gap-3 pt-2">
+    <div className="w-80 border-l border-border-subtle bg-surface overflow-y-auto shrink-0 animate-slide-in">
+      <div className="p-5 space-y-5">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-[14px] font-semibold text-text truncate font-mono">
+              {fn.name}
+            </h2>
             <button
               onClick={onOpenEditor}
-              className="flex-1 px-4 py-2 text-sm border border-border rounded-lg hover:bg-surface transition-all duration-200 ease-in-out"
+              className="mt-1 text-[11px] text-text-dim hover:text-signal font-mono transition-colors duration-150 truncate block max-w-full"
+              title={`${fn.filePath}:${fn.line}`}
             >
-              Open in Editor
-            </button>
-            <button
-              onClick={handleAskAgent}
-              className="flex-1 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:opacity-90 transition-all duration-200 ease-in-out"
-            >
-              Ask Agent
+              {shortPath}:{fn.line}
             </button>
           </div>
+          <button
+            onClick={onClose}
+            className="text-text-dim hover:text-text transition-colors p-1 -mr-1 -mt-1"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
-      )}
+
+        {/* Params */}
+        {fn.params.length > 0 && (
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim mb-2">
+              Parameters
+            </div>
+            <div className="rounded-md overflow-hidden border border-border-subtle">
+              {fn.params.map((p, i) => (
+                <div
+                  key={p.name}
+                  className={`flex items-center justify-between px-3 py-1.5 text-[12px] font-mono ${
+                    i % 2 === 0 ? 'bg-surface-raised/40' : ''
+                  }`}
+                >
+                  <span className="text-text">{p.name}</span>
+                  <span className="text-signal-dim text-[11px]">{p.type}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Return type */}
+        <div className="flex items-baseline gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim">
+            Returns
+          </span>
+          <span className="text-[11px] font-mono text-warm-dim bg-surface-raised/60 rounded px-1.5 py-0.5">
+            {fn.returnType}
+          </span>
+        </div>
+
+        {/* JSDoc */}
+        {fn.jsdoc && (
+          <div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim mb-2">
+              Documentation
+            </div>
+            <p className="text-[12px] leading-relaxed text-text-secondary italic">
+              {fn.jsdoc}
+            </p>
+          </div>
+        )}
+
+        {/* Source preview */}
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim mb-2">
+            Source
+          </div>
+          <CodePreview code={fn.sourcePreview} startLine={fn.line} />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onOpenEditor}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-medium text-text-secondary border border-border-subtle rounded-md hover:bg-surface-raised/50 hover:text-text transition-colors duration-150"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 10l2.5-1L9 4.5 7.5 3 3 7.5 2 10z" stroke="currentColor" strokeWidth="1" />
+              <path d="M6.5 3.5l2 2" stroke="currentColor" strokeWidth="1" />
+            </svg>
+            Editor
+          </button>
+          <button
+            onClick={handleAskAgent}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-medium text-void bg-signal rounded-md hover:brightness-110 transition-all duration-150"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1" />
+              <circle cx="6" cy="6" r="1.5" fill="currentColor" />
+            </svg>
+            Ask Agent
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -102,6 +102,18 @@ export class FileWatcher {
     }
 
     this.fileFunctions.set(absPath, newFunctions);
+
+    // Send file-changed message
+    const changeType = prev ? 'modified' : 'added';
+    this.client.send({
+      type: 'file-changed',
+      payload: {
+        filePath: absPath,
+        type: changeType,
+        timestamp: Date.now(),
+        functions: newFunctions.map((fn) => fn.id),
+      },
+    });
   }
 
   private handleRemove(relativePath: string): void {
@@ -111,6 +123,15 @@ export class FileWatcher {
       for (const fn of prev) {
         this.client.send({ type: 'function-removed', payload: { id: fn.id } });
       }
+      this.client.send({
+        type: 'file-changed',
+        payload: {
+          filePath: absPath,
+          type: 'deleted',
+          timestamp: Date.now(),
+          functions: [],
+        },
+      });
       this.fileFunctions.delete(absPath);
     }
   }
