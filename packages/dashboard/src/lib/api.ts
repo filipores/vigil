@@ -1,4 +1,4 @@
-import type { FunctionInfo, FileChange, AgentCommand } from '@agent-monitor/types';
+import type { FunctionInfo, FileChange, AgentCommand, GitCommit, CommitDiff } from '@agent-monitor/types';
 import { API_BASE } from './constants';
 
 export async function fetchFunctions(): Promise<FunctionInfo[]> {
@@ -28,4 +28,16 @@ export async function runAgent(command: AgentCommand): Promise<ReadableStream<Ui
     body: JSON.stringify(command),
   });
   return res.body;
+}
+
+export async function fetchCommits(limit = 20): Promise<GitCommit[]> {
+  const res = await fetch(`${API_BASE}/api/git/commits?limit=${limit}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchCommitDiff(hash: string): Promise<CommitDiff | null> {
+  const res = await fetch(`${API_BASE}/api/git/commits/${hash}/diff`);
+  if (!res.ok) return null;
+  return res.json();
 }

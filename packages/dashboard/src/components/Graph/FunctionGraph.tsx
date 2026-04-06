@@ -7,10 +7,11 @@ import { useForceGraph } from './useForceGraph';
 interface FunctionGraphProps {
   functions: FunctionInfo[];
   selectedId: string | null;
+  highlightedIds?: Set<string>;
   onSelectFunction: (id: string) => void;
 }
 
-export function FunctionGraph({ functions, selectedId, onSelectFunction }: FunctionGraphProps) {
+export function FunctionGraph({ functions, selectedId, highlightedIds, onSelectFunction }: FunctionGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -39,14 +40,20 @@ export function FunctionGraph({ functions, selectedId, onSelectFunction }: Funct
     return () => observer.disconnect();
   }, []);
 
-  useForceGraph({ canvasRef, nodes: functions, selectedId, onNodeClick: onSelectFunction });
+  useForceGraph({ canvasRef, nodes: functions, selectedId, highlightedIds, onNodeClick: onSelectFunction });
 
   return (
-    <div ref={containerRef} className="w-full h-full relative">
+    <div ref={containerRef} className="w-full h-full relative bg-void">
       <canvas ref={canvasRef} className="absolute inset-0" />
       {functions.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm">
-          Waiting for functions...
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-text-dim opacity-40">
+            <circle cx="16" cy="16" r="12" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+            <circle cx="16" cy="16" r="3" fill="currentColor" opacity="0.4" />
+          </svg>
+          <span className="text-[12px] text-text-dim">
+            Waiting for signals...
+          </span>
         </div>
       )}
     </div>

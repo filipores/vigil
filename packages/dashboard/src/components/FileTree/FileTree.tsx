@@ -7,6 +7,7 @@ import { FileTreeNode } from './FileTreeNode';
 interface FileTreeProps {
   files: FileChange[];
   functions: FunctionInfo[];
+  highlightedIds?: Set<string>;
   onSelectFunction: (id: string) => void;
 }
 
@@ -43,7 +44,7 @@ function buildTree(files: FileChange[]): TreeNode {
   return root;
 }
 
-export function FileTree({ files, functions, onSelectFunction }: FileTreeProps) {
+export function FileTree({ files, functions, highlightedIds, onSelectFunction }: FileTreeProps) {
   const tree = useMemo(() => buildTree(files), [files]);
 
   const functionsByFile = useMemo(() => {
@@ -57,20 +58,35 @@ export function FileTree({ files, functions, onSelectFunction }: FileTreeProps) 
   }, [functions]);
 
   return (
-    <div className="p-4">
-      <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-        Files
-      </h2>
-      <div className="space-y-0.5">
+    <div className="p-3 pt-4">
+      <div className="flex items-center gap-2 mb-4 px-2">
+        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-text-dim">
+          Files
+        </span>
+        {functions.length > 0 && (
+          <span className="text-[10px] text-signal-dim font-mono">
+            {functions.length}
+          </span>
+        )}
+      </div>
+      <div className="space-y-px">
         {Array.from(tree.children.values()).map((node) => (
           <FileTreeNode
             key={node.path}
             node={node}
             functionsByFile={functionsByFile}
+            highlightedIds={highlightedIds}
             onSelectFunction={onSelectFunction}
           />
         ))}
       </div>
+      {functions.length === 0 && (
+        <div className="px-2 py-8 text-center">
+          <p className="text-[11px] text-text-dim leading-relaxed">
+            Waiting for SDK connection...
+          </p>
+        </div>
+      )}
     </div>
   );
 }
