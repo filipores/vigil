@@ -17,8 +17,8 @@ const sans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Agent Monitor',
-  description: 'Monitor AI-generated code in real-time',
+  title: 'Vigil',
+  description: 'Keep watch over AI-generated code',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

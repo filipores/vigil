@@ -85,7 +85,7 @@ export function WorkspaceLayout() {
               <circle cx="7" cy="7" r="2" fill="currentColor" />
             </svg>
             <span className="text-[13px] font-medium tracking-tight text-text">
-              agent monitor
+              vigil
             </span>
           </div>
           <span className="text-text-dim text-[11px]">/</span>
