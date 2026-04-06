@@ -3,6 +3,16 @@ export interface FunctionParam {
   type: string;
 }
 
+export type FunctionCategory =
+  | 'hook'
+  | 'component'
+  | 'handler'
+  | 'api'
+  | 'util'
+  | 'class-method'
+  | 'async'
+  | 'function';
+
 export interface FunctionInfo {
   id: string;
   name: string;
@@ -14,4 +24,5 @@ export interface FunctionInfo {
   jsdoc: string | null;
   sourcePreview: string;
   lastModified: number;
+  category: FunctionCategory;
 }
