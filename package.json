@@ -1,0 +1,15 @@
+{
+  "name": "agent-monitor",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "npm run build -w packages/types && npm run build -w packages/sdk && npm run build -w packages/server && npm run build -w packages/dashboard",
+    "dev:types": "npm run dev -w packages/types",
+    "dev:sdk": "npm run dev -w packages/sdk",
+    "dev:server": "npm run dev -w packages/server",
+    "dev:dashboard": "npm run dev -w packages/dashboard"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
