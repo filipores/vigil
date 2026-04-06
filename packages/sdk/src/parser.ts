@@ -6,7 +6,10 @@ import { extractJsDoc, extractParamType, extractReturnType, SourceMapper } from 
 import { categorize } from './categorize.js';
 
 function getSourcePreview(source: string, startOffset: number, maxLines: number = 15): string {
-  const rest = source.slice(startOffset);
+  if (startOffset >= source.length) return '';
+  let lineStart = startOffset;
+  while (lineStart > 0 && source[lineStart - 1] !== '\n') lineStart--;
+  const rest = source.slice(lineStart);
   const lines = rest.split('\n').slice(0, maxLines);
   return lines.join('\n');
 }
@@ -293,6 +296,44 @@ function extractCallEdges(
   return edges;
 }
 
+function findFirstCodeOffset(source: string): number {
+  let i = 0;
+  while (i < source.length) {
+    const c = source.charCodeAt(i);
+    if (c === 32 || c === 9 || c === 10 || c === 13) { i++; continue; }
+    if (source[i] === '/' && source[i + 1] === '/') {
+      while (i < source.length && source[i] !== '\n') i++;
+      continue;
+    }
+    if (source[i] === '/' && source[i + 1] === '*') {
+      i += 2;
+      while (i < source.length && !(source[i - 1] === '*' && source[i] === '/')) i++;
+      if (i < source.length) i++;
+      continue;
+    }
+    break;
+  }
+  return i;
+}
+
+function normalizeSpans(node: unknown, base: number): void {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const item of node) normalizeSpans(item, base);
+    return;
+  }
+  const obj = node as Record<string, unknown>;
+  if (obj.span && typeof obj.span === 'object') {
+    const span = obj.span as Record<string, number>;
+    if (typeof span.start === 'number') span.start -= base;
+    if (typeof span.end === 'number') span.end -= base;
+  }
+  for (const key of Object.keys(obj)) {
+    if (key === 'type' || key === 'span') continue;
+    normalizeSpans(obj[key], base);
+  }
+}
+
 export async function parseFile(filePath: string): Promise<{ functions: FunctionInfo[]; edges: DataFlowEdge[] }> {
   const source = await readFile(filePath, 'utf-8');
   const isTsx = filePath.endsWith('.tsx') || filePath.endsWith('.jsx');
@@ -302,6 +343,9 @@ export async function parseFile(filePath: string): Promise<{ functions: Function
     tsx: isTsx,
     comments: true,
   });
+
+  const spanBase = module.span.start - findFirstCodeOffset(source);
+  if (spanBase !== 0) normalizeSpans(module, spanBase);
 
   const mapper = new SourceMapper(source);
   const results: FunctionInfo[] = [];
