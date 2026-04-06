@@ -198,9 +198,9 @@ export function useForceGraph({
           ctx.beginPath();
           ctx.moveTo(sx, sy);
           ctx.lineTo(tx, ty);
-          ctx.strokeStyle = isActive ? 'rgba(94, 196, 196, 0.45)' : 'rgba(94, 196, 196, 0.12)';
+          ctx.strokeStyle = isActive ? 'rgba(94, 196, 196, 0.6)' : 'rgba(94, 196, 196, 0.25)';
           ctx.lineWidth = isActive ? 1 : 0.5;
-          ctx.globalAlpha = isActive ? 0.8 : 0.4;
+          ctx.globalAlpha = isActive ? 0.9 : 0.7;
           ctx.stroke();
           ctx.globalAlpha = 1;
         }
