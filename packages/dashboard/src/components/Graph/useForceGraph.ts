@@ -86,6 +86,7 @@ export function useForceGraph({
     }
 
     const nodeSetChanged = graphNodesRef.current.length !== nodes.length;
+    const layoutCleared = graphNodesRef.current.length > 0 && canvasLayout.positions.length === 0;
 
     const graphNodes: GraphNode[] = nodes.map((fn) => {
       const existing = existingMap.get(fn.id);
@@ -98,7 +99,7 @@ export function useForceGraph({
         } else {
           existing.fx = undefined;
           existing.fy = undefined;
-          if (nodeSetChanged) {
+          if (nodeSetChanged || layoutCleared) {
             existing.x = width / 2 + (Math.random() - 0.5) * 120;
             existing.y = height / 2 + (Math.random() - 0.5) * 120;
           }
