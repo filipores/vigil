@@ -123,20 +123,26 @@ Fuer jedes gefixte Finding: Navigiere mit Playwright zur Seite, verifiziere dass
 
 ## Phase 4: CODE REVIEW
 
-Vor dem Commit: Fuehre den `/code-review` Skill aus. Dieser prueft:
-1. AI Slop (unnoetige Kommentare, aufgeblaehter Code)
-2. Security (OWASP Top 10, Secrets)
-3. Bugs & Correctness (Logikfehler)
-4. Performance (realistische Bottlenecks)
-5. Simplify (Code vereinfachen)
+Vor dem Commit: Fuehre ein Code-Review auf dem Diff deiner Aenderungen durch.
 
-```
-Skill: "code-review"
+```bash
+git diff --staged || git diff
 ```
 
-**Wenn BLOCK**: Zurueck zu Phase 2, fixe die kritischen Findings.
-**Wenn WARN**: Fixe HIGH-Severity Issues, dann weiter.
-**Wenn PASS**: Weiter zu Phase 5.
+Pruefe den Diff auf diese 4 Kategorien:
+
+**1. AI Slop**: Unnoetige Kommentare, ueber-defensive Checks, aufgeblaehte Abstraktionen, Placeholder-TODOs, verbose Naming. Loesche alles was keinen Mehrwert bringt.
+
+**2. Security**: Echte Schwachstellen — Command Injection, XSS, unsanitisierte Inputs, Secrets im Code. Nur reale Risiken, keine theoretischen.
+
+**3. Bugs**: Logikfehler die du erklaeren kannst wie man sie triggert. Stale Closures, Race Conditions, falsche Bedingungen.
+
+**4. Performance**: Nur wenn die Datenmenge realistisch gross genug ist (1000+ Eintraege). Keine Mikro-Optimierungen.
+
+**Bewertung:**
+- **BLOCK**: Kritische Security-Luecken oder Datenverlust-Bugs → Zurueck zu Phase 2, fixe sofort
+- **WARN**: HIGH-Severity Issues → Fixe sie, dann weiter zu Phase 5
+- **PASS**: Keine relevanten Findings → Weiter zu Phase 5
 
 ## Phase 5: COMMIT
 
