@@ -116,8 +116,18 @@ run_qa_iteration() {
       ;;
   esac
 
-  local status
-  status=$(echo "$result" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+  # Claude returns markdown with embedded JSON — extract the JSON block first
+  local json_block status
+  json_block=$(echo "$result" | sed -n '/^```json/,/^```/p' | sed '1d;$d')
+  if [ -n "$json_block" ]; then
+    status=$(echo "$json_block" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+  else
+    # Fallback: try direct jq parse, or grep for status
+    status=$(echo "$result" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+    if [ "$status" = "unknown" ]; then
+      echo "$result" | grep -qi "clean\|no.* issues\|0 findings" && status="clean"
+    fi
+  fi
 
   case "$status" in
     clean)
