@@ -83,7 +83,8 @@ run_claude() {
   echo "[Claude] Running QA exploration... ($(date))"
   local output
   output=$(claude -p "$prompt" \
-    --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Agent,mcp__plugin_playwright_playwright__*" \
+    --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Agent,mcp__playwright__*" \
+    --mcp-config "$SCRIPT_DIR/qa-mcp.json" \
     --output-format json 2>&1) || true
   echo "$output" >> "$log"
 
