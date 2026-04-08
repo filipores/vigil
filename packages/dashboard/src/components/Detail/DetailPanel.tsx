@@ -92,8 +92,8 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
                   onClick={() => onSelectFunction(f.id)}
                   className="block text-[11px] font-mono text-text-secondary hover:text-signal transition-colors"
                 >
-                  {f.name}
-                  <span className="text-text-dim ml-1 text-[10px]">
+                  {f.name}{' '}
+                  <span className="text-text-dim text-[10px]">
                     {f.filePath.split('/').pop()}
                   </span>
                 </button>
@@ -115,8 +115,8 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
                   onClick={() => onSelectFunction(f.id)}
                   className="block text-[11px] font-mono text-text-secondary hover:text-signal transition-colors"
                 >
-                  {f.name}
-                  <span className="text-text-dim ml-1 text-[10px]">
+                  {f.name}{' '}
+                  <span className="text-text-dim text-[10px]">
                     {f.filePath.split('/').pop()}
                   </span>
                 </button>
