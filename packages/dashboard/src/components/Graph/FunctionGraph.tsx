@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import type { FunctionInfo, DataFlowEdge, CanvasLayout } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
 import { useForceGraph } from './useForceGraph';
 
 interface FunctionGraphProps {
@@ -13,9 +13,10 @@ interface FunctionGraphProps {
   onSelectFunction: (id: string) => void;
   onPinNode?: (id: string, x: number, y: number) => void;
   canvasMode?: boolean;
+  analysisMap?: Map<string, AnalysisResult[]>;
 }
 
-export function FunctionGraph({ functions, edges, canvasLayout, selectedId, highlightedIds, onSelectFunction, onPinNode, canvasMode }: FunctionGraphProps) {
+export function FunctionGraph({ functions, edges, canvasLayout, selectedId, highlightedIds, onSelectFunction, onPinNode, canvasMode, analysisMap }: FunctionGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -54,6 +55,7 @@ export function FunctionGraph({ functions, edges, canvasLayout, selectedId, high
     onNodeClick: onSelectFunction,
     canvasMode,
     onNodeDrag: onPinNode,
+    analysisMap,
   });
 
   return (

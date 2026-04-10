@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { FunctionInfo, DataFlowEdge, CanvasLayout } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
+import { drawAnalysisBadge } from '@/components/Analysis/AnalysisBadge';
 import {
   forceSimulation,
   forceManyBody,
@@ -29,6 +30,7 @@ interface UseForceGraphOptions {
   onNodeClick: (id: string) => void;
   canvasMode?: boolean;
   onNodeDrag?: (id: string, x: number, y: number) => void;
+  analysisMap?: Map<string, AnalysisResult[]>;
 }
 
 const VOID = '#1e1e24';
@@ -67,6 +69,7 @@ export function useForceGraph({
   onNodeClick,
   canvasMode,
   onNodeDrag,
+  analysisMap,
 }: UseForceGraphOptions) {
   const simRef = useRef<Simulation<GraphNode, never> | null>(null);
   const graphNodesRef = useRef<GraphNode[]>([]);
@@ -271,6 +274,24 @@ export function useForceGraph({
           const label = node.name.length > 16 ? node.name.slice(0, 15) + '\u2026' : node.name;
           ctx.fillText(label, x, y + R + 6);
 
+          // Analysis badge
+          if (analysisMap) {
+            const results = analysisMap.get(node.id);
+            if (results && results.length > 0) {
+              const concerns = results.flatMap((r) => r.concerns);
+              const hasConcerns = concerns.length > 0;
+              let maxSeverity: string | undefined;
+              if (hasConcerns) {
+                maxSeverity = concerns.some((c) => c.severity === 'critical')
+                  ? 'critical'
+                  : concerns.some((c) => c.severity === 'warning')
+                    ? 'warning'
+                    : 'info';
+              }
+              drawAnalysisBadge(ctx, x, y, R, { hasAnalysis: true, hasConcerns, maxSeverity });
+            }
+          }
+
           ctx.globalAlpha = 1;
         }
 
@@ -390,5 +411,5 @@ export function useForceGraph({
         canvas.removeEventListener('mousemove', handleMove);
       };
     }
-  }, [canvasRef, nodes, edges, canvasLayout, selectedId, highlightedIds, onNodeClick, canvasMode, onNodeDrag]);
+  }, [canvasRef, nodes, edges, canvasLayout, selectedId, highlightedIds, onNodeClick, canvasMode, onNodeDrag, analysisMap]);
 }

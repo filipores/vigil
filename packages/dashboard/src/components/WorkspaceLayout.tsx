@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import type { AgentContext, FunctionCategory, CanvasLayout } from '@agent-monitor/types';
+import type { AgentContext, FunctionCategory, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
 import { useFunctions } from '@/hooks/useFunctions';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useGitCommits } from '@/hooks/useGitCommits';
 import { useCanvasLayout } from '@/hooks/useCanvasLayout';
+import { useAnalysis } from '@/hooks/useAnalysis';
 import { WS_URL } from '@/lib/constants';
 import { SidebarTabs } from '@/components/Sidebar/SidebarTabs';
 import { FileTree } from '@/components/FileTree/FileTree';
@@ -16,13 +17,31 @@ import { DiffView } from '@/components/Commits/DiffView';
 import { DetailPanel } from '@/components/Detail/DetailPanel';
 import { AgentModal } from '@/components/Agent/AgentModal';
 import { CanvasAgentPanel } from '@/components/Agent/CanvasAgentPanel';
-import { openInEditor } from '@/lib/api';
+import { openInEditor, launchDebugSession } from '@/lib/api';
 
 const EMPTY_CANVAS_LAYOUT: CanvasLayout = { version: 1, positions: [], groups: [], annotations: [] };
 
 export function WorkspaceLayout() {
   const { functions, files, edges, selectedId, selectFunction } = useFunctions();
-  const { connected } = useWebSocket({ url: WS_URL, onMessage: () => {} });
+  const {
+    analyses,
+    activeRuns,
+    handleAnalysisMessage,
+    triggerAnalysis,
+    stopAnalysis,
+    getAnalysesForFunction,
+  } = useAnalysis();
+  const { connected } = useWebSocket({
+    url: WS_URL,
+    onMessage: useCallback(
+      (msg: import('@agent-monitor/types').WsMessage) => {
+        if (msg.type.startsWith('analysis-')) {
+          handleAnalysisMessage(msg);
+        }
+      },
+      [handleAnalysisMessage],
+    ),
+  });
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [agentContext, setAgentContext] = useState<AgentContext | null>(null);
@@ -86,6 +105,59 @@ export function WorkspaceLayout() {
   const handleCloseAgent = useCallback(() => {
     setIsAgentModalOpen(false);
   }, []);
+
+  const analysisMap = useMemo(() => {
+    const map = new Map<string, AnalysisResult[]>();
+    for (const a of analyses) {
+      const existing = map.get(a.functionId);
+      if (existing) {
+        existing.push(a);
+      } else {
+        map.set(a.functionId, [a]);
+      }
+    }
+    return map;
+  }, [analyses]);
+
+  const activeAnalysisRunForSelected = useMemo(
+    () => activeRuns.find((r) => r.status === 'running' || r.status === 'queued'),
+    [activeRuns],
+  );
+
+  const handleTriggerAnalysis = useCallback(
+    (functionId: string) => {
+      triggerAnalysis([functionId]);
+    },
+    [triggerAnalysis],
+  );
+
+  const handleStopAnalysis = useCallback(
+    (runId: string) => {
+      stopAnalysis(runId);
+    },
+    [stopAnalysis],
+  );
+
+  const handleDebugFunction = useCallback(
+    (opts: { filePath: string; line: number; functionName: string }) => {
+      launchDebugSession(opts);
+    },
+    [],
+  );
+
+  const handleDebugCallChain = useCallback(
+    (chain: Array<{ filePath: string; line: number; name: string }>) => {
+      if (chain.length === 0) return;
+      const primary = chain[0];
+      launchDebugSession({
+        filePath: primary.filePath,
+        line: primary.line,
+        functionName: primary.name,
+        callChain: chain,
+      });
+    },
+    [],
+  );
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-void">
@@ -203,6 +275,7 @@ export function WorkspaceLayout() {
               onSelectFunction={handleSelectFunction}
               onPinNode={canvasMode ? pinNode : undefined}
               canvasMode={canvasMode}
+              analysisMap={analysisMap}
             />
           )}
         </main>
@@ -218,6 +291,12 @@ export function WorkspaceLayout() {
             edges={edges}
             allFunctions={functions}
             onSelectFunction={handleSelectFunction}
+            analysisResults={selectedFunction ? getAnalysesForFunction(selectedFunction.id) : []}
+            activeAnalysisRun={activeAnalysisRunForSelected}
+            onTriggerAnalysis={handleTriggerAnalysis}
+            onStopAnalysis={handleStopAnalysis}
+            onDebugFunction={handleDebugFunction}
+            onDebugCallChain={handleDebugCallChain}
           />
         )}
 

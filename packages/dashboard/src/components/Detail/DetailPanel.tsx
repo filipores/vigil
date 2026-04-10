@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { FunctionInfo, AgentContext, DataFlowEdge } from '@agent-monitor/types';
+import type { FunctionInfo, AgentContext, DataFlowEdge, AnalysisResult, AnalysisStatus } from '@agent-monitor/types';
 import { CodePreview } from './CodePreview';
+import { AnalysisSection } from '@/components/Analysis/AnalysisSection';
 
 interface DetailPanelProps {
   fn: FunctionInfo | null;
@@ -13,9 +14,15 @@ interface DetailPanelProps {
   edges: DataFlowEdge[];
   allFunctions: FunctionInfo[];
   onSelectFunction: (id: string) => void;
+  analysisResults?: AnalysisResult[];
+  activeAnalysisRun?: AnalysisStatus;
+  onTriggerAnalysis?: (functionId: string) => void;
+  onStopAnalysis?: (runId: string) => void;
+  onDebugFunction?: (opts: { filePath: string; line: number; functionName: string }) => void;
+  onDebugCallChain?: (chain: Array<{ filePath: string; line: number; name: string }>) => void;
 }
 
-export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edges, allFunctions, onSelectFunction }: DetailPanelProps) {
+export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edges, allFunctions, onSelectFunction, analysisResults, activeAnalysisRun, onTriggerAnalysis, onStopAnalysis, onDebugFunction, onDebugCallChain }: DetailPanelProps) {
   const handleAskAgent = () => {
     if (!fn) return;
     onAskAgent({
@@ -77,6 +84,45 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
               <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
+        </div>
+
+        {/* Quick actions */}
+        <div className="flex gap-1.5">
+          {onDebugFunction && (
+            <button
+              onClick={() => onDebugFunction({ filePath: fn.filePath, line: fn.line, functionName: fn.name })}
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1" />
+                <circle cx="5" cy="5" r="1" fill="currentColor" />
+              </svg>
+              Debug
+            </button>
+          )}
+          {onDebugCallChain && (
+            <button
+              onClick={() => {
+                const chain = [
+                  ...callers.map((f) => ({ filePath: f.filePath, line: f.line, name: f.name })),
+                  { filePath: fn.filePath, line: fn.line, name: fn.name },
+                  ...callees.map((f) => ({ filePath: f.filePath, line: f.line, name: f.name })),
+                ];
+                onDebugCallChain(chain);
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-secondary border border-border-subtle rounded hover:bg-surface-raised/50 hover:text-text transition-colors duration-150"
+            >
+              Debug Chain
+            </button>
+          )}
+          {onTriggerAnalysis && (
+            <button
+              onClick={() => onTriggerAnalysis(fn.id)}
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150"
+            >
+              Analyze
+            </button>
+          )}
         </div>
 
         {/* Called by */}
@@ -176,6 +222,16 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
           </div>
           <CodePreview code={fn.sourcePreview} startLine={fn.line} />
         </div>
+
+        {/* Analysis */}
+        {onTriggerAnalysis && onStopAnalysis && (
+          <AnalysisSection
+            analysisResults={analysisResults ?? []}
+            activeRun={activeAnalysisRun}
+            onTrigger={() => onTriggerAnalysis(fn.id)}
+            onStop={onStopAnalysis}
+          />
+        )}
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">
