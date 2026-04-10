@@ -4,3 +4,6 @@ dist
 .env.local
 .env
 *.tsbuildinfo
+*.png
+.playwright-mcp/
+.vigil/
