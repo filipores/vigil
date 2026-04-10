@@ -91,7 +91,7 @@
       prevHighlightedIds = highlighted;
       if (highlighted.size > 0) {
         setCommitMode(highlighted);
-      } else {
+      } else if (scopeStore.scopeMode.type === 'commit') {
         clearScope();
       }
     }
@@ -100,7 +100,7 @@
   $effect(() => {
     if (selectedCategory) {
       setCategoryMode(new Set([selectedCategory]));
-    } else {
+    } else if (scopeStore.scopeMode.type === 'category') {
       clearScope();
     }
   });

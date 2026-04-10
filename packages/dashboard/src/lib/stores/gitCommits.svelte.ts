@@ -12,7 +12,7 @@ let initialized = false;
 export function initGitCommits() {
   if (initialized) return;
   initialized = true;
-  fetchCommits().then((c) => { commits = c; }).catch(() => {});
+  fetchCommits().then((c) => { commits = c; }).catch((err) => console.warn('vigil: fetch failed:', err.message));
 }
 
 export async function selectCommit(hash: string, functions: FunctionInfo[]) {
@@ -21,27 +21,33 @@ export async function selectCommit(hash: string, functions: FunctionInfo[]) {
   isLoadingDiff = true;
   latestRequest = hash;
 
-  const diff = await fetchCommitDiff(hash);
-  if (latestRequest !== hash) return;
-  commitDiff = diff;
+  try {
+    const diff = await fetchCommitDiff(hash);
+    if (latestRequest !== hash) return;
+    commitDiff = diff;
 
-  if (diff) {
-    const changedPaths = diff.diffs.map((d) => d.filePath);
-    const matched = new Set<string>();
-    for (const fn of functions) {
-      for (const cp of changedPaths) {
-        if (cp.endsWith(fn.filePath) || fn.filePath.endsWith(cp)) {
-          matched.add(fn.id);
-          break;
+    if (diff) {
+      const changedPaths = diff.diffs.map((d) => d.filePath);
+      const matched = new Set<string>();
+      for (const fn of functions) {
+        for (const cp of changedPaths) {
+          if (cp.endsWith(fn.filePath) || fn.filePath.endsWith(cp)) {
+            matched.add(fn.id);
+            break;
+          }
         }
       }
+      highlightedFunctionIds = matched;
+    } else {
+      highlightedFunctionIds = new Set();
     }
-    highlightedFunctionIds = matched;
-  } else {
+  } catch (err) {
+    console.warn('vigil: fetchCommitDiff failed:', (err as Error).message);
+    commitDiff = null;
     highlightedFunctionIds = new Set();
+  } finally {
+    isLoadingDiff = false;
   }
-
-  isLoadingDiff = false;
 }
 
 export function clearCommit() {

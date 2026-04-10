@@ -167,10 +167,11 @@ function startSDK(): void {
   const { serverPort } = getConfig();
   const sdkEntry = join(workspaceRoot, 'packages', 'sdk', 'dist', 'index.js');
 
-  // Use a small inline script to call the monitor function
+  // Use a small inline script to call the monitor function.
+  // Pass paths via environment variables to avoid escaping issues.
   const script = [
-    `import('file://${sdkEntry}')`,
-    `.then(m => m.monitor({ root: '${workspaceRoot.replace(/'/g, "\\'")}', serverUrl: 'ws://localhost:${serverPort}/ws' }))`,
+    `import('file://' + process.env.VIGIL_SDK_ENTRY)`,
+    `.then(m => m.monitor({ root: process.env.VIGIL_ROOT, serverUrl: 'ws://localhost:${serverPort}/ws' }))`,
     `.catch(e => { console.error(e); process.exit(1); });`,
   ].join('');
 
@@ -178,6 +179,7 @@ function startSDK(): void {
 
   sdkProcess = spawn('node', ['--input-type=module', '-e', script], {
     cwd: workspaceRoot,
+    env: { ...process.env, VIGIL_ROOT: workspaceRoot, VIGIL_SDK_ENTRY: sdkEntry },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 

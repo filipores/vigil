@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
   import type { FunctionInfo } from '@agent-monitor/types';
   import { computeCommonRoot } from '../FileTree/computeCommonRoot';
 

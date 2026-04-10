@@ -26,12 +26,14 @@
   let prompt = $state('');
   let commands = $state<CommandEntry[]>([]);
   let running = $state(false);
+  let error = $state<string | null>(null);
   let counter = 0;
 
   async function handleRun() {
     if (!prompt.trim() || running) return;
     running = true;
     commands = [];
+    error = null;
 
     try {
       const stream = await runCanvasAgent(prompt, { functions, edges, canvasLayout: layout });
@@ -63,8 +65,8 @@
           }
         }
       }
-    } catch {
-      // stream error
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
     } finally {
       running = false;
     }
@@ -106,6 +108,13 @@
       >
         {running ? 'Running...' : 'Run'}
       </button>
+
+      <!-- Error -->
+      {#if error}
+        <div class="text-[11px] text-red-400 bg-red-400/10 border border-red-400/20 rounded px-2 py-1.5">
+          {error}
+        </div>
+      {/if}
 
       <!-- Commands -->
       {#if commands.length > 0}

@@ -3,8 +3,10 @@ import type { WsMessage } from '@agent-monitor/types';
 let connected = $state(false);
 let ws: WebSocket | null = null;
 let messageHandler: ((msg: WsMessage) => void) | null = null;
+let disposed = false;
 
 function connect(url: string) {
+  if (disposed) return;
   ws = new WebSocket(url);
 
   ws.onopen = () => {
@@ -23,7 +25,9 @@ function connect(url: string) {
 
   ws.onclose = () => {
     connected = false;
-    setTimeout(() => connect(url), 2000);
+    if (!disposed) {
+      setTimeout(() => connect(url), 2000);
+    }
   };
 
   ws.onerror = () => {
@@ -32,10 +36,12 @@ function connect(url: string) {
 }
 
 export function initWebSocket(url: string, onMessage: (msg: WsMessage) => void) {
+  disposed = false;
   messageHandler = onMessage;
   connect(url);
 
   return () => {
+    disposed = true;
     ws?.close();
     ws = null;
     messageHandler = null;

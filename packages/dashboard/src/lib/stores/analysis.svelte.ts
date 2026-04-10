@@ -16,7 +16,7 @@ export function initAnalysis() {
       for (const r of results) map.set(r.id, r);
       analyses = map;
     })
-    .catch(() => {});
+    .catch((err) => console.warn('vigil: fetch failed:', err.message));
 }
 
 export function handleAnalysisMessage(msg: WsMessage) {

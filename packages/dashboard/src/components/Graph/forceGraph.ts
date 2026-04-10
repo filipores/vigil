@@ -71,6 +71,8 @@ export function createForceGraph(opts: ForceGraphOptions) {
 
   // Event listener cleanup trackers
   let cleanupListeners: (() => void) | null = null;
+  let lastCanvasMode: boolean | undefined = canvasMode;
+  let isDragging = false;
 
   const R = 22;
 
@@ -374,6 +376,128 @@ export function createForceGraph(opts: ForceGraphOptions) {
     ctx.restore();
   }
 
+  function setupListeners(isCanvasMode: boolean | undefined, sim: Simulation<GraphNode, never>) {
+    if (cleanupListeners) {
+      cleanupListeners();
+      cleanupListeners = null;
+    }
+
+    if (isCanvasMode) {
+      let dragging: { nodeId: string; node: GraphNode } | null = null;
+      let moved = false;
+
+      const findNode = (mx: number, my: number): GraphNode | null => {
+        const [wx, wy] = screenToWorld(mx, my);
+        for (const node of graphNodes) {
+          const dx = (node.x ?? 0) - wx;
+          const dy = (node.y ?? 0) - wy;
+          if (dx * dx + dy * dy < (R + 8) * (R + 8)) return node;
+        }
+        return null;
+      };
+
+      const onPointerDown = (e: PointerEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const node = findNode(mx, my);
+        if (node) {
+          dragging = { nodeId: node.id, node };
+          moved = false;
+          isDragging = true;
+          canvas.setPointerCapture(e.pointerId);
+          node.fx = node.x;
+          node.fy = node.y;
+          sim.alphaTarget(0.3).restart();
+        }
+      };
+
+      const onPointerMove = (e: PointerEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        if (dragging) {
+          const [wx, wy] = screenToWorld(mx, my);
+          dragging.node.fx = wx;
+          dragging.node.fy = wy;
+          moved = true;
+        } else {
+          const hovered = findNode(mx, my);
+          hoveredId = hovered ? hovered.id : null;
+          canvas.style.cursor = hovered ? 'grab' : 'default';
+        }
+      };
+
+      const onPointerUp = (e: PointerEvent) => {
+        if (dragging) {
+          canvas.releasePointerCapture(e.pointerId);
+          sim.alphaTarget(0);
+          if (!moved) {
+            onNodeClick(dragging.nodeId);
+          } else {
+            const finalX = dragging.node.fx ?? dragging.node.x ?? 0;
+            const finalY = dragging.node.fy ?? dragging.node.y ?? 0;
+            onNodeDrag?.(dragging.nodeId, finalX, finalY);
+          }
+          dragging = null;
+          moved = false;
+          isDragging = false;
+        }
+      };
+
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', onPointerUp);
+
+      cleanupListeners = () => {
+        canvas.removeEventListener('pointerdown', onPointerDown);
+        canvas.removeEventListener('pointermove', onPointerMove);
+        canvas.removeEventListener('pointerup', onPointerUp);
+      };
+    } else {
+      const handleClick = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const [wx, wy] = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+
+        for (const node of graphNodes) {
+          const dx = (node.x ?? 0) - wx;
+          const dy = (node.y ?? 0) - wy;
+          if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
+            onNodeClick(node.id);
+            return;
+          }
+        }
+      };
+
+      const handleMove = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        const [wx, wy] = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+        let hoveredNode: GraphNode | null = null;
+
+        for (const node of graphNodes) {
+          const dx = (node.x ?? 0) - wx;
+          const dy = (node.y ?? 0) - wy;
+          if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
+            hoveredNode = node;
+            break;
+          }
+        }
+
+        hoveredId = hoveredNode ? hoveredNode.id : null;
+        canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
+      };
+
+      canvas.addEventListener('click', handleClick);
+      canvas.addEventListener('mousemove', handleMove);
+
+      cleanupListeners = () => {
+        canvas.removeEventListener('click', handleClick);
+        canvas.removeEventListener('mousemove', handleMove);
+      };
+    }
+  }
+
   function update(data: ForceGraphUpdateData) {
     const { nodes, edges, canvasLayout, selectedId, highlightedIds, analysisMap } = data;
     currentAnalysisMap = analysisMap;
@@ -470,123 +594,25 @@ export function createForceGraph(opts: ForceGraphOptions) {
 
     simulation = sim;
 
-    // Clean up old listeners
-    if (cleanupListeners) {
-      cleanupListeners();
-      cleanupListeners = null;
-    }
+    // Only re-register listeners when canvasMode changes (not on every data update)
+    const modeChanged = canvasMode !== lastCanvasMode;
+    lastCanvasMode = canvasMode;
 
-    if (canvasMode) {
-      let dragging: { nodeId: string; node: GraphNode } | null = null;
-      let moved = false;
-
-      const findNode = (mx: number, my: number): GraphNode | null => {
-        const [wx, wy] = screenToWorld(mx, my);
-        for (const node of graphNodes) {
-          const dx = (node.x ?? 0) - wx;
-          const dy = (node.y ?? 0) - wy;
-          if (dx * dx + dy * dy < (R + 8) * (R + 8)) return node;
-        }
-        return null;
-      };
-
-      const onPointerDown = (e: PointerEvent) => {
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-        const node = findNode(mx, my);
-        if (node) {
-          dragging = { nodeId: node.id, node };
-          moved = false;
-          canvas.setPointerCapture(e.pointerId);
-          node.fx = node.x;
-          node.fy = node.y;
-          sim.alphaTarget(0.3).restart();
-        }
-      };
-
-      const onPointerMove = (e: PointerEvent) => {
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-
-        if (dragging) {
-          const [wx, wy] = screenToWorld(mx, my);
-          dragging.node.fx = wx;
-          dragging.node.fy = wy;
-          moved = true;
-        } else {
-          const hovered = findNode(mx, my);
-          hoveredId = hovered ? hovered.id : null;
-          canvas.style.cursor = hovered ? 'grab' : 'default';
-        }
-      };
-
-      const onPointerUp = (e: PointerEvent) => {
-        if (dragging) {
-          canvas.releasePointerCapture(e.pointerId);
-          sim.alphaTarget(0);
-          if (!moved) {
-            onNodeClick(dragging.nodeId);
+    if (modeChanged || !cleanupListeners) {
+      // If a drag is in progress, defer re-registration until drag completes
+      if (isDragging) {
+        const pendingMode = canvasMode;
+        const checkDragDone = () => {
+          if (!isDragging) {
+            setupListeners(pendingMode, sim);
           } else {
-            const finalX = dragging.node.fx ?? dragging.node.x ?? 0;
-            const finalY = dragging.node.fy ?? dragging.node.y ?? 0;
-            onNodeDrag?.(dragging.nodeId, finalX, finalY);
+            requestAnimationFrame(checkDragDone);
           }
-          dragging = null;
-          moved = false;
-        }
-      };
-
-      canvas.addEventListener('pointerdown', onPointerDown);
-      canvas.addEventListener('pointermove', onPointerMove);
-      canvas.addEventListener('pointerup', onPointerUp);
-
-      cleanupListeners = () => {
-        canvas.removeEventListener('pointerdown', onPointerDown);
-        canvas.removeEventListener('pointermove', onPointerMove);
-        canvas.removeEventListener('pointerup', onPointerUp);
-      };
-    } else {
-      const handleClick = (e: MouseEvent) => {
-        const rect = canvas.getBoundingClientRect();
-        const [wx, wy] = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
-
-        for (const node of graphNodes) {
-          const dx = (node.x ?? 0) - wx;
-          const dy = (node.y ?? 0) - wy;
-          if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
-            onNodeClick(node.id);
-            return;
-          }
-        }
-      };
-
-      const handleMove = (e: MouseEvent) => {
-        const rect = canvas.getBoundingClientRect();
-        const [wx, wy] = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
-        let hoveredNode: GraphNode | null = null;
-
-        for (const node of graphNodes) {
-          const dx = (node.x ?? 0) - wx;
-          const dy = (node.y ?? 0) - wy;
-          if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
-            hoveredNode = node;
-            break;
-          }
-        }
-
-        hoveredId = hoveredNode ? hoveredNode.id : null;
-        canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
-      };
-
-      canvas.addEventListener('click', handleClick);
-      canvas.addEventListener('mousemove', handleMove);
-
-      cleanupListeners = () => {
-        canvas.removeEventListener('click', handleClick);
-        canvas.removeEventListener('mousemove', handleMove);
-      };
+        };
+        requestAnimationFrame(checkDragDone);
+      } else {
+        setupListeners(canvasMode, sim);
+      }
     }
   }
 

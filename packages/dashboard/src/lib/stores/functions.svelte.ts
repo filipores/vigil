@@ -18,15 +18,15 @@ export function initFunctions() {
       for (const fn of fns) map.set(fn.id, fn);
       functionsMap = map;
     })
-    .catch(() => {});
+    .catch((err) => console.warn('vigil: fetch failed:', err.message));
 
   fetchFiles()
     .then((f) => { files = f; })
-    .catch(() => {});
+    .catch((err) => console.warn('vigil: fetch failed:', err.message));
 
   fetchEdges()
     .then((e) => { edges = e; })
-    .catch(() => {});
+    .catch((err) => console.warn('vigil: fetch failed:', err.message));
 }
 
 export function handleFunctionsMessage(msg: WsMessage) {
