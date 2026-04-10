@@ -17,7 +17,7 @@ interface DetailPanelProps {
   onSelectFunction: (id: string) => void;
   analysisResults?: AnalysisResult[];
   activeAnalysisRun?: AnalysisStatus;
-  onTriggerAnalysis: (functionId: string) => void;
+  onTriggerAnalysis: (functionId: string, taskName?: string) => void;
   onStopAnalysis: (runId: string) => void;
   onDebugFunction?: (opts: { filePath: string; line: number; functionName: string }) => void;
   onDebugCallChain?: (chain: Array<{ filePath: string; line: number; name: string }>) => void;
@@ -247,7 +247,7 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
         <AnalysisSection
           analysisResults={analysisResults ?? []}
           activeRun={activeAnalysisRun}
-          onTrigger={() => onTriggerAnalysis(fn.id)}
+          onTrigger={(taskName?: string) => onTriggerAnalysis(fn.id, taskName)}
           onStop={onStopAnalysis}
         />
 

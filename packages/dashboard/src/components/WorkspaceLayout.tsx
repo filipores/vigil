@@ -200,7 +200,7 @@ export function WorkspaceLayout() {
   );
 
   const handleTriggerAnalysis = useCallback(
-    (functionId: string) => triggerAnalysis([functionId]),
+    (functionId: string, taskName?: string) => triggerAnalysis([functionId], taskName),
     [triggerAnalysis],
   );
 
