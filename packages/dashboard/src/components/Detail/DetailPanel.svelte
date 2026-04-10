@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FunctionInfo, AgentContext, DataFlowEdge, AnalysisResult, AnalysisStatus } from '@agent-monitor/types';
+  import type { FunctionInfo, AgentContext, DataFlowEdge, AnalysisResult, AnalysisStatus, RuleViolation } from '@agent-monitor/types';
   import CodePreview from './CodePreview.svelte';
   import AnalysisSection from '../Analysis/AnalysisSection.svelte';
   import { computeCommonRoot } from '../FileTree/computeCommonRoot';
@@ -20,6 +20,7 @@
     onStopAnalysis,
     onDebugFunction,
     onDebugCallChain,
+    violations = [],
     onFocusFunction,
   }: {
     fn: FunctionInfo | null;
@@ -35,10 +36,23 @@
     analysisStreamingText?: string;
     onTriggerAnalysis: (functionId: string, taskName?: string) => void;
     onStopAnalysis: (runId: string) => void;
+    violations?: RuleViolation[];
     onDebugFunction?: (opts: { filePath: string; line: number; functionName: string }) => void;
     onDebugCallChain?: (chain: Array<{ filePath: string; line: number; name: string }>) => void;
     onFocusFunction?: (functionId: string) => void;
   } = $props();
+
+  const VIOLATION_SEVERITY_DOT: Record<string, string> = {
+    info: 'bg-text-secondary',
+    warning: 'bg-warm',
+    critical: 'bg-red-400',
+  };
+
+  const VIOLATION_SEVERITY_TEXT: Record<string, string> = {
+    info: 'text-text-secondary',
+    warning: 'text-warm',
+    critical: 'text-red-400',
+  };
 
   function handleAskAgent() {
     if (!fn) return;
@@ -237,6 +251,30 @@
         </div>
         <CodePreview code={fn.sourcePreview} startLine={fn.line} />
       </div>
+
+      <!-- Rule Violations -->
+      {#if violations && violations.length > 0}
+        <div>
+          <div class="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim mb-2">
+            Rule Violations
+          </div>
+          <div class="space-y-1.5">
+            {#each violations as v}
+              <div class="flex items-start gap-1.5 px-2 py-1.5 rounded border {v.severity === 'critical' ? 'border-red-400/30 bg-red-400/5' : 'border-border-subtle bg-surface-raised/30'}">
+                <span class="mt-1 w-1.5 h-1.5 rounded-full shrink-0 {VIOLATION_SEVERITY_DOT[v.severity]}"></span>
+                <div class="min-w-0">
+                  <span class="text-[11px] font-medium {VIOLATION_SEVERITY_TEXT[v.severity]}">
+                    {v.rule}
+                  </span>
+                  <p class="text-[10px] text-text-dim leading-snug mt-0.5">
+                    {v.description}
+                  </p>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
 
       <!-- Analysis -->
       <AnalysisSection

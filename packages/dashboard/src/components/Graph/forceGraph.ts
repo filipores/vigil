@@ -1,5 +1,6 @@
-import type { FunctionInfo, DataFlowEdge, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge, CanvasLayout, AnalysisResult, RuleViolation } from '@agent-monitor/types';
 import { drawAnalysisBadge } from '../Analysis/AnalysisBadge';
+import { drawViolationBadge } from '../Rules/ViolationBadge';
 import {
   forceSimulation,
   forceManyBody,
@@ -33,6 +34,7 @@ export interface ForceGraphUpdateData {
   selectedId: string | null;
   highlightedIds?: Set<string>;
   analysisMap?: Map<string, AnalysisResult[]>;
+  violationsMap?: Map<string, RuleViolation[]>;
 }
 
 const VOID = '#1e1e24';
@@ -68,6 +70,7 @@ export function createForceGraph(opts: ForceGraphOptions) {
   let graphNodes: GraphNode[] = [];
   let hoveredId: string | null = null;
   let currentAnalysisMap: Map<string, AnalysisResult[]> | undefined;
+  let currentViolationsMap: Map<string, RuleViolation[]> | undefined;
 
   // Event listener cleanup trackers
   let cleanupListeners: (() => void) | null = null;
@@ -370,6 +373,19 @@ export function createForceGraph(opts: ForceGraphOptions) {
         }
       }
 
+      // Violation badge
+      if (currentViolationsMap) {
+        const nodeViolations = currentViolationsMap.get(node.id);
+        if (nodeViolations && nodeViolations.length > 0) {
+          let highestSeverity: 'info' | 'warning' | 'critical' = 'info';
+          for (const v of nodeViolations) {
+            if (v.severity === 'critical') { highestSeverity = 'critical'; break; }
+            if (v.severity === 'warning') highestSeverity = 'warning';
+          }
+          drawViolationBadge(ctx, x, y, R, highestSeverity);
+        }
+      }
+
       ctx.globalAlpha = 1;
     }
 
@@ -499,8 +515,9 @@ export function createForceGraph(opts: ForceGraphOptions) {
   }
 
   function update(data: ForceGraphUpdateData) {
-    const { nodes, edges, canvasLayout, selectedId, highlightedIds, analysisMap } = data;
+    const { nodes, edges, canvasLayout, selectedId, highlightedIds, analysisMap, violationsMap } = data;
     currentAnalysisMap = analysisMap;
+    currentViolationsMap = violationsMap;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;

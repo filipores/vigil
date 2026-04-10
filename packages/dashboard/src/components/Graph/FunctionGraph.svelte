@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import type { FunctionInfo, DataFlowEdge, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
+  import type { FunctionInfo, DataFlowEdge, CanvasLayout, AnalysisResult, RuleViolation } from '@agent-monitor/types';
   import { createForceGraph, type ForceGraphUpdateData } from './forceGraph';
 
   let {
@@ -13,6 +13,7 @@
     onPinNode,
     canvasMode = false,
     analysisMap,
+    violationsMap,
   }: {
     functions: FunctionInfo[];
     edges: DataFlowEdge[];
@@ -23,6 +24,7 @@
     onPinNode?: (id: string, x: number, y: number) => void;
     canvasMode?: boolean;
     analysisMap?: Map<string, AnalysisResult[]>;
+    violationsMap?: Map<string, RuleViolation[]>;
   } = $props();
 
   let containerEl: HTMLDivElement;
@@ -64,6 +66,7 @@
       selectedId,
       highlightedIds,
       analysisMap,
+      violationsMap,
     });
   });
 
@@ -86,6 +89,7 @@
         selectedId,
         highlightedIds,
         analysisMap,
+        violationsMap,
       });
     }
   });

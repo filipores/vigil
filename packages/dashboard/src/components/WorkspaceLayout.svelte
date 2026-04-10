@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import type { AgentContext, FunctionCategory, CanvasLayout, AnalysisResult, WsMessage } from '@agent-monitor/types';
+  import type { AgentContext, FunctionCategory, CanvasLayout, AnalysisResult, RuleViolation, WsMessage } from '@agent-monitor/types';
   import { initFunctions, getFunctionsStore, handleFunctionsMessage, selectFunction } from '$lib/stores/functions.svelte';
   import { initWebSocket, getWebSocketStore } from '$lib/stores/websocket.svelte';
   import { initGitCommits, getGitCommitsStore, selectCommit, clearCommit } from '$lib/stores/gitCommits.svelte';
   import { getCanvasLayoutStore, pinNode, applyCommand, clearLayout } from '$lib/stores/canvasLayout.svelte';
   import { initAnalysis, getAnalysisStore, handleAnalysisMessage, triggerAnalysis, stopAnalysis, getAnalysesForFunction, getStreamingOutput } from '$lib/stores/analysis.svelte';
+  import { initRules, getRulesStore, handleRulesMessage, updateRules, triggerCheck } from '$lib/stores/rules.svelte';
   import { getGraphScopeStore, computeScope, setFocusMode, setCommitMode, setCategoryMode, clearScope } from '$lib/stores/graphScope.svelte';
   import { WS_URL } from '$lib/constants';
   import { openInEditor, launchDebugSession } from '$lib/api';
@@ -21,6 +22,7 @@
   import AgentModal from './Agent/AgentModal.svelte';
   import CanvasAgentPanel from './Agent/CanvasAgentPanel.svelte';
   import SearchPalette from './Search/SearchPalette.svelte';
+  import RulesPanel from './Rules/RulesPanel.svelte';
 
   const EMPTY_CANVAS_LAYOUT: CanvasLayout = { version: 1, positions: [], groups: [], annotations: [] };
 
@@ -41,6 +43,7 @@
   let layoutStore = $derived(getCanvasLayoutStore());
   let analysisStore = $derived(getAnalysisStore());
   let scopeStore = $derived(getGraphScopeStore());
+  let rulesStore = $derived(getRulesStore());
 
   // Derived data
   let { scopedFunctions, scopedEdges } = $derived(computeScope(fnStore.functions, fnStore.edges));
@@ -72,6 +75,12 @@
     }
     return map;
   });
+
+  let violationsMap = $derived(rulesStore.violationsByFunction);
+
+  let selectedViolations = $derived(
+    fnStore.selectedId ? (violationsMap.get(fnStore.selectedId) ?? []) : [],
+  );
 
   let activeAnalysisRunForSelected = $derived(
     analysisStore.activeRuns.find(
@@ -133,11 +142,15 @@
     initFunctions();
     initAnalysis();
     initGitCommits();
+    initRules();
 
     cleanupWs = initWebSocket(WS_URL, (msg: WsMessage) => {
       handleFunctionsMessage(msg);
       if (msg.type.startsWith('analysis-')) {
         handleAnalysisMessage(msg);
+      }
+      if (msg.type === 'rule-violation') {
+        handleRulesMessage(msg);
       }
     });
 
@@ -271,6 +284,14 @@
           {selectedCategory}
           onSelectCategory={(c) => selectedCategory = c}
         />
+        <div class="px-3 py-2 border-b border-border-subtle">
+          <RulesPanel
+            rules={rulesStore.rules}
+            violations={rulesStore.violations}
+            onUpdateRules={(r) => updateRules(r)}
+            onTriggerCheck={() => triggerCheck()}
+          />
+        </div>
         <FileTree
           files={fnStore.files}
           functions={filteredFunctions}
@@ -315,6 +336,7 @@
           onPinNode={canvasMode ? pinNode : undefined}
           {canvasMode}
           {analysisMap}
+          {violationsMap}
         />
       {/if}
     </main>
@@ -335,6 +357,7 @@
         analysisStreamingText={analysisStreamingText}
         onTriggerAnalysis={handleTriggerAnalysis}
         onStopAnalysis={stopAnalysis}
+        violations={selectedViolations}
         onDebugFunction={handleDebugFunction}
         onDebugCallChain={handleDebugCallChain}
         onFocusFunction={setFocusMode}

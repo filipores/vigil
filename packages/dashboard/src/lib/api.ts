@@ -1,4 +1,4 @@
-import type { FunctionInfo, FileChange, AgentCommand, GitCommit, CommitDiff, DataFlowEdge, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
+import type { FunctionInfo, FileChange, AgentCommand, GitCommit, CommitDiff, DataFlowEdge, CanvasLayout, AnalysisResult, RuleDefinition, RuleViolation } from '@agent-monitor/types';
 import { API_BASE } from './constants';
 
 export async function fetchFunctions(): Promise<FunctionInfo[]> {
@@ -100,6 +100,32 @@ export async function getAutoAnalysis(): Promise<{ enabled: boolean }> {
   const res = await fetch(`${API_BASE}/api/analysis/auto`);
   if (!res.ok) return { enabled: false };
   return res.json();
+}
+
+export async function fetchRules(): Promise<RuleDefinition[]> {
+  const res = await fetch(`${API_BASE}/api/rules`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function updateRules(rules: RuleDefinition[]): Promise<void> {
+  await fetch(`${API_BASE}/api/rules`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rules),
+  });
+}
+
+export async function fetchViolations(): Promise<RuleViolation[]> {
+  const res = await fetch(`${API_BASE}/api/rules/violations`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function triggerRulesCheck(): Promise<void> {
+  await fetch(`${API_BASE}/api/rules/check`, {
+    method: 'POST',
+  });
 }
 
 export async function launchDebugSession(opts: {
