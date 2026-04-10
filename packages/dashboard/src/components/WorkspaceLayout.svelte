@@ -7,6 +7,7 @@
   import { getCanvasLayoutStore, pinNode, applyCommand, clearLayout } from '$lib/stores/canvasLayout.svelte';
   import { initAnalysis, getAnalysisStore, handleAnalysisMessage, triggerAnalysis, stopAnalysis, getAnalysesForFunction, getStreamingOutput } from '$lib/stores/analysis.svelte';
   import { initRules, getRulesStore, handleRulesMessage, updateRules, triggerCheck } from '$lib/stores/rules.svelte';
+  import { getTimelineStore, handleTimelineMessage } from '$lib/stores/timeline.svelte';
   import { getGraphScopeStore, computeScope, setFocusMode, setCommitMode, setCategoryMode, clearScope } from '$lib/stores/graphScope.svelte';
   import { WS_URL } from '$lib/constants';
   import { openInEditor, launchDebugSession } from '$lib/api';
@@ -23,6 +24,7 @@
   import CanvasAgentPanel from './Agent/CanvasAgentPanel.svelte';
   import SearchPalette from './Search/SearchPalette.svelte';
   import RulesPanel from './Rules/RulesPanel.svelte';
+  import TimelinePanel from './Timeline/TimelinePanel.svelte';
 
   const EMPTY_CANVAS_LAYOUT: CanvasLayout = { version: 1, positions: [], groups: [], annotations: [] };
 
@@ -30,7 +32,7 @@
   let isDetailOpen = $state(false);
   let isAgentModalOpen = $state(false);
   let agentContext = $state<AgentContext | null>(null);
-  let sidebarTab = $state<'files' | 'commits'>('files');
+  let sidebarTab = $state<'files' | 'commits' | 'timeline'>('files');
   let selectedCategory = $state<FunctionCategory | null>(null);
   let canvasMode = $state(false);
   let isCanvasAgentOpen = $state(false);
@@ -44,6 +46,7 @@
   let analysisStore = $derived(getAnalysisStore());
   let scopeStore = $derived(getGraphScopeStore());
   let rulesStore = $derived(getRulesStore());
+  let timelineStore = $derived(getTimelineStore());
 
   // Derived data
   let { scopedFunctions, scopedEdges } = $derived(computeScope(fnStore.functions, fnStore.edges));
@@ -146,6 +149,7 @@
 
     cleanupWs = initWebSocket(WS_URL, (msg: WsMessage) => {
       handleFunctionsMessage(msg);
+      handleTimelineMessage(msg);
       if (msg.type.startsWith('analysis-')) {
         handleAnalysisMessage(msg);
       }
@@ -277,6 +281,7 @@
           sidebarTab = tab;
           if (tab === 'files') clearCommit();
         }}
+        timelineBadge={timelineStore.criticalCount}
       />
       {#if sidebarTab === 'files'}
         <CategoryFilter
@@ -304,6 +309,13 @@
           commits={gitStore.commits}
           selectedHash={gitStore.selectedHash}
           onSelectCommit={(hash) => selectCommit(hash, fnStore.functions)}
+        />
+      {/if}
+      {#if sidebarTab === 'timeline'}
+        <TimelinePanel
+          events={timelineStore.events}
+          onSelectFunction={handleSelectFunction}
+          filterEvents={timelineStore.filterEvents}
         />
       {/if}
     </aside>

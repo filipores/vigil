@@ -21,3 +21,4 @@ export type {
   WsMessage,
 } from './messages.js';
 export type { RuleDefinition, RuleViolation } from './rules.js';
+export type { TimelineEvent } from './timeline.js';
