@@ -9,9 +9,11 @@ import { categorize } from './categorize.js';
 
 const SOURCE_PREVIEW_MAX_CHARS = 2000;
 
-function getSourcePreview(source: string, startOffset: number, maxLines: number = 15): string {
-  if (startOffset >= source.length) return '';
-  let lineStart = startOffset;
+function getSourcePreview(source: string, startOffset: number, mapper: SourceMapper, maxLines: number = 15): string {
+  // Convert SWC byte offset to JS character offset
+  const charOffset = mapper.toCharOffset(startOffset);
+  if (charOffset >= source.length) return '';
+  let lineStart = charOffset;
   while (lineStart > 0 && source[lineStart - 1] !== '\n') lineStart--;
   const rest = source.slice(lineStart);
   const lines = rest.split('\n').slice(0, maxLines);
@@ -39,12 +41,12 @@ function extractFunction(
   const params: AstNode[] = node.params ?? [];
   const parsedParams = params.map((p: AstNode) => {
     const paramNode = p.pat ?? p.param ?? p;
-    return extractParamType(paramNode, source);
+    return extractParamType(paramNode, source, mapper);
   });
 
-  const returnType = extractReturnType(node, source);
-  const jsdoc = extractJsDoc(source, span.start);
-  const sourcePreview = getSourcePreview(source, span.start);
+  const returnType = extractReturnType(node, source, mapper);
+  const jsdoc = extractJsDoc(source, span.start, mapper);
+  const sourcePreview = getSourcePreview(source, span.start, mapper);
 
   return {
     id: generateId(filePath, name, loc.line),
@@ -80,12 +82,12 @@ function extractFromArrowOrFnExpr(
   const params: AstNode[] = init.params ?? [];
   const parsedParams = params.map((p: AstNode) => {
     const paramNode = p.pat ?? p.param ?? p;
-    return extractParamType(paramNode, source);
+    return extractParamType(paramNode, source, mapper);
   });
 
-  const returnType = extractReturnType(init, source);
-  const jsdoc = extractJsDoc(source, declSpan.start);
-  const sourcePreview = getSourcePreview(source, declSpan.start);
+  const returnType = extractReturnType(init, source, mapper);
+  const jsdoc = extractJsDoc(source, declSpan.start, mapper);
+  const sourcePreview = getSourcePreview(source, declSpan.start, mapper);
 
   return {
     id: generateId(filePath, name, loc.line),
@@ -162,11 +164,11 @@ function walkNode(
           const params: AstNode[] = fn.params ?? [];
           const parsedParams = params.map((p: AstNode) => {
             const paramNode = p.pat ?? p.param ?? p;
-            return extractParamType(paramNode, source);
+            return extractParamType(paramNode, source, mapper);
           });
-          const returnType = extractReturnType(fn, source);
-          const jsdoc = extractJsDoc(source, span.start);
-          const sourcePreview = getSourcePreview(source, span.start);
+          const returnType = extractReturnType(fn, source, mapper);
+          const jsdoc = extractJsDoc(source, span.start, mapper);
+          const sourcePreview = getSourcePreview(source, span.start, mapper);
           results.push({
             id: generateId(filePath, fullName, loc.line),
             name: fullName,
@@ -304,7 +306,8 @@ function extractCallEdges(
   return edges;
 }
 
-function findFirstCodeOffset(source: string): number {
+/** Returns the byte offset of the first non-whitespace, non-comment character. */
+function findFirstCodeByteOffset(source: string): number {
   let i = 0;
   while (i < source.length) {
     const c = source.charCodeAt(i);
@@ -321,7 +324,8 @@ function findFirstCodeOffset(source: string): number {
     }
     break;
   }
-  return i;
+  // Convert the character offset to a byte offset
+  return new TextEncoder().encode(source.slice(0, i)).length;
 }
 
 function normalizeSpans(node: unknown, base: number): void {
@@ -441,7 +445,7 @@ export async function parseFile(filePath: string): Promise<{ functions: Function
     comments: true,
   });
 
-  const spanBase = module.span.start - findFirstCodeOffset(source);
+  const spanBase = module.span.start - findFirstCodeByteOffset(source);
   if (spanBase !== 0) normalizeSpans(module, spanBase);
 
   const mapper = new SourceMapper(source);
