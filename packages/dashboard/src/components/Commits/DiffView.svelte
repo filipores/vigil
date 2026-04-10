@@ -74,7 +74,7 @@
         <div class="text-[11px] font-mono text-text-secondary bg-surface-raised/30 px-3 py-1.5 sticky top-0 z-10">
           {fileDiff.filePath}
         </div>
-        <pre class="text-[11px] font-mono leading-[1.6]"><code>{#each fileDiff.lines as line, i}{@const style = lineStyles[line.type]}{@const isTargetLine =
+        <pre class="text-[11px] font-mono leading-[1.6]" style="white-space: pre-wrap; overflow-wrap: break-word;"><code>{#each fileDiff.lines as line, i}{@const style = lineStyles[line.type]}{@const isTargetLine =
                 isTargetFile &&
                 activeFunction &&
                 line.newLineNo !== null &&

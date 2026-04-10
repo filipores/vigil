@@ -91,11 +91,11 @@
         <div class="flex items-center gap-2 px-2 py-1.5 rounded border border-border-subtle bg-surface-raised/30">
           <button
             onclick={() => toggleRule(rule.id)}
-            class="shrink-0 w-5 h-3 rounded-full relative transition-colors duration-150 {rule.enabled ? 'bg-signal/30' : 'bg-surface-bright'}"
+            class="shrink-0 w-8 h-4 rounded-full relative transition-colors duration-200 {rule.enabled ? 'bg-signal/30' : 'bg-surface-raised'}"
             title={rule.enabled ? 'Enabled' : 'Disabled'}
           >
             <span
-              class="absolute top-0.5 w-2 h-2 rounded-full transition-all duration-150 {rule.enabled ? 'left-2.5 bg-signal' : 'left-0.5 bg-text-dim'}"
+              class="absolute top-0.5 w-3 h-3 rounded-full transition-all duration-200 {rule.enabled ? 'left-[18px] bg-signal' : 'left-0.5 bg-text-dim'}"
             ></span>
           </button>
           <span class="w-1.5 h-1.5 rounded-full shrink-0 {SEVERITY_DOT[rule.severity]}"></span>
@@ -127,7 +127,9 @@
     <button
       onclick={addRule}
       disabled={!newRuleText.trim()}
-      class="px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+      class="px-2 py-1 text-[10px] font-medium rounded transition-all duration-150 {newRuleText.trim()
+        ? 'text-void bg-signal hover:brightness-110'
+        : 'bg-surface-raised text-text-dim cursor-not-allowed'}"
     >
       Add
     </button>

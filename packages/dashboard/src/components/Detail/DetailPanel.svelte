@@ -54,6 +54,38 @@
     critical: 'text-red-400',
   };
 
+  let debugButtonText = $state('Debug');
+  let debugChainButtonText = $state('Debug Chain');
+
+  function handleDebugClick() {
+    if (!fn) return;
+    try {
+      onDebugFunction!({ filePath: fn.filePath, line: fn.line, functionName: fn.name });
+      debugButtonText = 'Launched!';
+      setTimeout(() => { debugButtonText = 'Debug'; }, 2000);
+    } catch {
+      debugButtonText = 'Error';
+      setTimeout(() => { debugButtonText = 'Debug'; }, 2000);
+    }
+  }
+
+  function handleDebugChainClick() {
+    if (!fn) return;
+    try {
+      const chain = [
+        ...callers.map((f) => ({ filePath: f.filePath, line: f.line, name: f.name })),
+        { filePath: fn.filePath, line: fn.line, name: fn.name },
+        ...callees.map((f) => ({ filePath: f.filePath, line: f.line, name: f.name })),
+      ];
+      onDebugCallChain!(chain);
+      debugChainButtonText = 'Launched!';
+      setTimeout(() => { debugChainButtonText = 'Debug Chain'; }, 2000);
+    } catch {
+      debugChainButtonText = 'Error';
+      setTimeout(() => { debugChainButtonText = 'Debug Chain'; }, 2000);
+    }
+  }
+
   function handleAskAgent() {
     if (!fn) return;
     onAskAgent({
@@ -121,29 +153,30 @@
       <div class="flex gap-1.5">
         {#if onDebugFunction}
           <button
-            onclick={() => onDebugFunction!({ filePath: fn!.filePath, line: fn!.line, functionName: fn!.name })}
-            class="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150"
+            onclick={handleDebugClick}
+            class="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded transition-all duration-150 {debugButtonText === 'Launched!'
+              ? 'text-void bg-green-500'
+              : debugButtonText === 'Error'
+                ? 'text-void bg-red-400'
+                : 'text-void bg-signal hover:brightness-110'}"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1" />
               <circle cx="5" cy="5" r="1" fill="currentColor" />
             </svg>
-            Debug
+            {debugButtonText}
           </button>
         {/if}
         {#if onDebugCallChain}
           <button
-            onclick={() => {
-              const chain = [
-                ...callers.map((f) => ({ filePath: f.filePath, line: f.line, name: f.name })),
-                { filePath: fn!.filePath, line: fn!.line, name: fn!.name },
-                ...callees.map((f) => ({ filePath: f.filePath, line: f.line, name: f.name })),
-              ];
-              onDebugCallChain!(chain);
-            }}
-            class="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-secondary border border-border-subtle rounded hover:bg-surface-raised/50 hover:text-text transition-colors duration-150"
+            onclick={handleDebugChainClick}
+            class="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded transition-all duration-150 {debugChainButtonText === 'Launched!'
+              ? 'text-void bg-green-500'
+              : debugChainButtonText === 'Error'
+                ? 'text-void bg-red-400'
+                : 'text-text-secondary border border-border-subtle hover:bg-surface-raised/50 hover:text-text'}"
           >
-            Debug Chain
+            {debugChainButtonText}
           </button>
         {/if}
         {#if onFocusFunction}

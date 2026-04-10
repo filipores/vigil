@@ -268,7 +268,7 @@
 
     <div class="flex items-center gap-2">
       <div class="w-1.5 h-1.5 rounded-full {wsStore.connected ? 'bg-signal animate-pulse' : 'bg-text-dim'}"></div>
-      <span class="text-[11px] text-text-dim">
+      <span class="text-[11px] {wsStore.connected ? 'text-text-secondary' : 'text-text-dim'}">
         {wsStore.connected ? 'live' : 'disconnected'}
       </span>
     </div>

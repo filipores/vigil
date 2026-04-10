@@ -76,8 +76,13 @@
   <!-- Event list -->
   <div class="flex-1 overflow-y-auto">
     {#if filtered.length === 0}
-      <div class="p-3 py-8 text-center">
-        <p class="text-[11px] text-text-dim">No events yet</p>
+      <div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-text-dim mb-3">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" />
+          <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+        <p class="text-[12px] text-text-secondary font-medium mb-1">No events yet</p>
+        <p class="text-[11px] text-text-dim leading-relaxed max-w-[200px]">Changes, analyses, and violations will appear here as they happen</p>
       </div>
     {:else}
       {#each filtered as event (event.id)}

@@ -45,7 +45,7 @@ const NODE_SELECTED_BG = 'rgba(80, 200, 200, 0.10)';
 const NODE_SELECTED_BORDER = 'rgba(80, 200, 200, 0.5)';
 const SIGNAL = '#5ec4c4';
 const SIGNAL_GLOW = 'rgba(80, 200, 200, 0.08)';
-const LABEL_COLOR = 'rgba(255, 255, 255, 0.55)';
+const LABEL_COLOR = 'rgba(255, 255, 255, 0.7)';
 const LABEL_SELECTED = 'rgba(255, 255, 255, 0.85)';
 
 const WARM_BG = 'rgba(200, 170, 80, 0.10)';
@@ -344,11 +344,16 @@ export function createForceGraph(opts: ForceGraphOptions) {
       if (!skipLabels) {
         const showLabel = showAllLabels || !isScaled || isSelected || node.id === hoveredId || pinnedIds.has(node.id);
         if (showLabel) {
-          ctx.fillStyle = isSelected ? LABEL_SELECTED : isHighlighted ? WARM_LABEL : LABEL_COLOR;
-          ctx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace';
+          ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           const label = node.name.length > 16 ? node.name.slice(0, 15) + '\u2026' : node.name;
+          const textWidth = ctx.measureText(label).width;
+          // Dark background for contrast
+          ctx.fillStyle = 'oklch(0.13 0.005 260 / 0.7)';
+          ctx.fillRect(x - textWidth / 2 - 2, y + R + 4, textWidth + 4, 16);
+          // Label text
+          ctx.fillStyle = isSelected ? LABEL_SELECTED : isHighlighted ? WARM_LABEL : LABEL_COLOR;
           ctx.fillText(label, x, y + R + 6);
         }
       }

@@ -27,7 +27,7 @@
     <button
       class="text-[10px] font-mono px-2 py-0.5 rounded {selectedCategory === null
         ? 'bg-signal/10 text-signal'
-        : 'text-text-dim hover:bg-surface-raised/50'}"
+        : 'text-text-secondary hover:bg-surface-raised/50'}"
       onclick={() => onSelectCategory(null)}
     >
       all
@@ -36,7 +36,7 @@
       <button
         class="text-[10px] font-mono px-2 py-0.5 rounded {selectedCategory === category
           ? 'bg-signal/10 text-signal'
-          : 'text-text-dim hover:bg-surface-raised/50'}"
+          : 'text-text-secondary hover:bg-surface-raised/50'}"
         onclick={() => onSelectCategory(category)}
       >
         {category} {count}
