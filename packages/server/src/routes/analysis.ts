@@ -43,7 +43,7 @@ analysisRouter.post('/api/analysis/stop/:runId', (c) => {
 
   const stopped = engine.stopAnalysis(c.req.param('runId'));
   if (!stopped) return c.json({ error: 'No running analysis with that ID' }, 404);
-  return c.json({ status: 'stopped' });
+  return c.json({ success: true });
 });
 
 analysisRouter.get('/api/analysis/status', (c) => {

@@ -24,4 +24,5 @@ export interface AnalysisStatus {
   runId: string;
   status: 'queued' | 'running' | 'completed' | 'failed';
   progress?: string;
+  functionIds?: string[];
 }

@@ -2,9 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { FunctionInfo, FileChange, DataFlowEdge, WsMessage } from '@agent-monitor/types';
-import { useWebSocket } from './useWebSocket';
 import { fetchFunctions, fetchFiles, fetchEdges } from '@/lib/api';
-import { WS_URL } from '@/lib/constants';
 
 export function useFunctions() {
   const [functionsMap, setFunctionsMap] = useState<Map<string, FunctionInfo>>(new Map());
@@ -30,7 +28,7 @@ export function useFunctions() {
       .catch(() => {});
   }, []);
 
-  const onMessage = useCallback((msg: WsMessage) => {
+  const handleMessage = useCallback((msg: WsMessage) => {
     switch (msg.type) {
       case 'function-discovered':
         setFunctionsMap((prev) => new Map(prev).set(msg.payload.id, msg.payload));
@@ -74,13 +72,11 @@ export function useFunctions() {
     }
   }, []);
 
-  useWebSocket({ url: WS_URL, onMessage });
-
   const functions = Array.from(functionsMap.values());
 
   const selectFunction = useCallback((id: string | null) => {
     setSelectedId(id);
   }, []);
 
-  return { functions, files, edges, selectedId, selectFunction };
+  return { functions, files, edges, selectedId, selectFunction, handleMessage };
 }

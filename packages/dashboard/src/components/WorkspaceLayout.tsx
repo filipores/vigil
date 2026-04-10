@@ -22,7 +22,7 @@ import { openInEditor, launchDebugSession } from '@/lib/api';
 const EMPTY_CANVAS_LAYOUT: CanvasLayout = { version: 1, positions: [], groups: [], annotations: [] };
 
 export function WorkspaceLayout() {
-  const { functions, files, edges, selectedId, selectFunction } = useFunctions();
+  const { functions, files, edges, selectedId, selectFunction, handleMessage: handleFunctionsMessage } = useFunctions();
   const {
     analyses,
     activeRuns,
@@ -35,11 +35,12 @@ export function WorkspaceLayout() {
     url: WS_URL,
     onMessage: useCallback(
       (msg: import('@agent-monitor/types').WsMessage) => {
+        handleFunctionsMessage(msg);
         if (msg.type.startsWith('analysis-')) {
           handleAnalysisMessage(msg);
         }
       },
-      [handleAnalysisMessage],
+      [handleFunctionsMessage, handleAnalysisMessage],
     ),
   });
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -120,8 +121,13 @@ export function WorkspaceLayout() {
   }, [analyses]);
 
   const activeAnalysisRunForSelected = useMemo(
-    () => activeRuns.find((r) => r.status === 'running' || r.status === 'queued'),
-    [activeRuns],
+    () =>
+      activeRuns.find(
+        (r) =>
+          (r.status === 'running' || r.status === 'queued') &&
+          (!selectedId || (r.functionIds && r.functionIds.includes(selectedId))),
+      ),
+    [activeRuns, selectedId],
   );
 
   const handleTriggerAnalysis = useCallback(

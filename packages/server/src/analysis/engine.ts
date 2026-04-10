@@ -35,7 +35,7 @@ export class AnalysisEngine {
 
     this.broadcast({
       type: 'analysis-started',
-      payload: { runId, status: 'running', progress: 'Starting analysis...' },
+      payload: { runId, status: 'running', progress: 'Starting analysis...', functionIds },
     });
 
     const { child, promise } = startAnalysis({
