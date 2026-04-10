@@ -1,5 +1,3 @@
-'use client';
-
 const COLOR_NONE = 'oklch(0.55 0.10 190)';
 const COLOR_WARNING = 'oklch(0.78 0.12 60)';
 const COLOR_CRITICAL = 'oklch(0.65 0.20 25)';

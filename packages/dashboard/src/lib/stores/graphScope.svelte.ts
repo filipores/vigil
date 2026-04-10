@@ -1,6 +1,3 @@
-'use client';
-
-import { useState, useMemo, useCallback } from 'react';
 import type { FunctionInfo, DataFlowEdge } from '@agent-monitor/types';
 
 export type ScopeMode =
@@ -9,10 +6,7 @@ export type ScopeMode =
   | { type: 'commit'; functionIds: Set<string> }
   | { type: 'category'; categories: Set<string> };
 
-interface UseGraphScopeOpts {
-  functions: FunctionInfo[];
-  edges: DataFlowEdge[];
-}
+let mode = $state<ScopeMode>({ type: 'all' });
 
 function computeFocusScope(
   functions: FunctionInfo[],
@@ -20,7 +14,6 @@ function computeFocusScope(
   functionId: string,
   hops: number,
 ): { scopedFunctions: FunctionInfo[]; scopedEdges: DataFlowEdge[] } {
-  // Build adjacency lists (both directions)
   const neighbors = new Map<string, Set<string>>();
   for (const e of edges) {
     if (!neighbors.has(e.sourceId)) neighbors.set(e.sourceId, new Set());
@@ -29,7 +22,6 @@ function computeFocusScope(
     neighbors.get(e.targetId)!.add(e.sourceId);
   }
 
-  // BFS from functionId up to N hops
   const visited = new Set<string>();
   let frontier = [functionId];
   visited.add(functionId);
@@ -61,7 +53,6 @@ function computeCommitScope(
   edges: DataFlowEdge[],
   functionIds: Set<string>,
 ): { scopedFunctions: FunctionInfo[]; scopedEdges: DataFlowEdge[] } {
-  // Include changed functions + their direct callers/callees (1-hop)
   const expanded = new Set(functionIds);
   for (const e of edges) {
     if (functionIds.has(e.sourceId)) expanded.add(e.targetId);
@@ -88,48 +79,46 @@ function computeCategoryScope(
   return { scopedFunctions, scopedEdges };
 }
 
-export function useGraphScope({ functions, edges }: UseGraphScopeOpts) {
-  const [mode, setMode] = useState<ScopeMode>({ type: 'all' });
+export function computeScope(
+  functions: FunctionInfo[],
+  edges: DataFlowEdge[],
+): { scopedFunctions: FunctionInfo[]; scopedEdges: DataFlowEdge[] } {
+  switch (mode.type) {
+    case 'all':
+      return { scopedFunctions: functions, scopedEdges: edges };
+    case 'focus':
+      return computeFocusScope(functions, edges, mode.functionId, mode.hops);
+    case 'commit':
+      return computeCommitScope(functions, edges, mode.functionIds);
+    case 'category':
+      return computeCategoryScope(functions, edges, mode.categories);
+  }
+}
 
-  const { scopedFunctions, scopedEdges } = useMemo(() => {
-    switch (mode.type) {
-      case 'all':
-        return { scopedFunctions: functions, scopedEdges: edges };
-      case 'focus':
-        return computeFocusScope(functions, edges, mode.functionId, mode.hops);
-      case 'commit':
-        return computeCommitScope(functions, edges, mode.functionIds);
-      case 'category':
-        return computeCategoryScope(functions, edges, mode.categories);
-    }
-  }, [functions, edges, mode]);
+export function setFocusMode(functionId: string, hops?: number) {
+  mode = { type: 'focus', functionId, hops: hops ?? 2 };
+}
 
-  const setFocusMode = useCallback(
-    (functionId: string, hops?: number) =>
-      setMode({ type: 'focus', functionId, hops: hops ?? 2 }),
-    [],
-  );
+export function setCommitMode(functionIds: Set<string>) {
+  mode = { type: 'commit', functionIds };
+}
 
-  const setCommitMode = useCallback(
-    (functionIds: Set<string>) => setMode({ type: 'commit', functionIds }),
-    [],
-  );
+export function setCategoryMode(categories: Set<string>) {
+  mode = { type: 'category', categories };
+}
 
-  const setCategoryMode = useCallback(
-    (categories: Set<string>) => setMode({ type: 'category', categories }),
-    [],
-  );
+export function clearScope() {
+  mode = { type: 'all' };
+}
 
-  const clearScope = useCallback(() => setMode({ type: 'all' }), []);
-
+export function getGraphScopeStore() {
   return {
-    scopedFunctions,
-    scopedEdges,
-    scopeMode: mode,
+    get scopeMode() { return mode; },
+    get isScoped() { return mode.type !== 'all'; },
+    computeScope,
     setFocusMode,
     setCommitMode,
     setCategoryMode,
     clearScope,
-    isScoped: mode.type !== 'all',
   };
 }
