@@ -1,4 +1,4 @@
-import type { FunctionInfo, FileChange, AgentCommand, GitCommit, CommitDiff, DataFlowEdge, CanvasLayout } from '@agent-monitor/types';
+import type { FunctionInfo, FileChange, AgentCommand, GitCommit, CommitDiff, DataFlowEdge, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
 import { API_BASE } from './constants';
 
 export async function fetchFunctions(): Promise<FunctionInfo[]> {
@@ -58,4 +58,55 @@ export async function runCanvasAgent(
     body: JSON.stringify({ prompt, graph }),
   });
   return res.body;
+}
+
+export async function fetchAnalysisResults(functionId?: string): Promise<AnalysisResult[]> {
+  const params = functionId ? `?functionId=${functionId}` : '';
+  const res = await fetch(`${API_BASE}/api/analysis/results${params}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchAnalysisResult(id: string): Promise<AnalysisResult> {
+  const res = await fetch(`${API_BASE}/api/analysis/results/${id}`);
+  return res.json();
+}
+
+export async function triggerAnalysisRequest(
+  functionIds: string[],
+  taskName?: string,
+): Promise<{ runId: string; status: string }> {
+  const res = await fetch(`${API_BASE}/api/analysis/trigger`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ functionIds, taskName }),
+  });
+  return res.json();
+}
+
+export async function stopAnalysisRequest(runId: string): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/api/analysis/stop/${runId}`, {
+    method: 'POST',
+  });
+  return res.json();
+}
+
+export async function fetchAnalysisStatus(): Promise<{ running: string[]; maxConcurrent: number }> {
+  const res = await fetch(`${API_BASE}/api/analysis/status`);
+  return res.json();
+}
+
+export async function launchDebugSession(opts: {
+  filePath: string;
+  line: number;
+  functionName: string;
+  projectRoot?: string;
+  callChain?: Array<{ filePath: string; line: number; name: string }>;
+}): Promise<{ config: object; breakpoints: Array<{ filePath: string; line: number }> }> {
+  const res = await fetch(`${API_BASE}/api/editor/debug`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(opts),
+  });
+  return res.json();
 }
