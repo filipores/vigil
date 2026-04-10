@@ -9,7 +9,8 @@ npm workspaces monorepo with TypeScript project references. Dependency order:
 - **`@agent-monitor/types`** — Shared type definitions (functions, files, edges, WS messages, canvas, git)
 - **`@agent-monitor/sdk`** — File watcher + SWC AST parser; connects to server via WebSocket
 - **`@agent-monitor/server`** — Hono HTTP + WS server (port 3001); in-memory store, broadcasts to dashboards
-- **`@agent-monitor/dashboard`** — Next.js 15 + React 19 app (port 3000); D3 force graph, Tailwind CSS 4
+- **`@agent-monitor/dashboard`** — Vite + Svelte 5 SPA (port 3000); D3 force graph, Tailwind CSS 4
+- **`vigil` (vscode-ext)** — VS Code extension; auto-starts server+SDK, status bar, debug bridge
 
 ## Commands
 
@@ -17,7 +18,7 @@ npm workspaces monorepo with TypeScript project references. Dependency order:
 npm install                  # install all workspaces
 npm run build                # sequential: types → sdk → server → dashboard
 npm run dev:server           # tsx watch src/index.ts (port 3001)
-npm run dev:dashboard        # next dev --port 3000
+npm run dev:dashboard        # vite dev --port 3000
 npm run dev:types            # tsc -b --watch (rebuild types on change)
 ```
 
@@ -67,8 +68,8 @@ Exported from `@agent-monitor/types`:
 - ESM throughout (`"type": "module"`, `Node16` module resolution)
 - No default exports in types package — all named exports
 - Function IDs: 12-char SHA1 of `"filePath:name:line"`
-- All dashboard components use `"use client"`
-- State management via hooks only (no Redux/Zustand)
+- Dashboard uses Svelte 5 runes ($state, $derived, $effect) in .svelte.ts stores
+- State management via Svelte stores (no external state library)
 - No test framework — QA via `scripts/qa-loop.sh` (Playwright-based)
 - Server framework: Hono with `@hono/node-ws`
 - TypeScript strict mode, `ES2022` target
@@ -80,6 +81,6 @@ When adding a feature that spans packages:
 1. **types/** — Add/modify interfaces, extend `WsMessage` union if needed
 2. **sdk/** — Add file-watching logic or new AST extraction
 3. **server/** — Update `store.ts` + `handleSdkMessage` in `websocket.ts` + HTTP routes
-4. **dashboard/** — Add hook in `hooks/`, component in `components/`, wire into page
+4. **dashboard/** — Add store in `lib/stores/`, component in `components/`, wire into WorkspaceLayout
 
 Build order matters: `types` first, then `sdk`/`server` (parallel OK), then `dashboard`.
