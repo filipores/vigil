@@ -7,13 +7,19 @@ import { generateId } from './utils.js';
 import { extractJsDoc, extractParamType, extractReturnType, SourceMapper } from './extractor.js';
 import { categorize } from './categorize.js';
 
+const SOURCE_PREVIEW_MAX_CHARS = 2000;
+
 function getSourcePreview(source: string, startOffset: number, maxLines: number = 15): string {
   if (startOffset >= source.length) return '';
   let lineStart = startOffset;
   while (lineStart > 0 && source[lineStart - 1] !== '\n') lineStart--;
   const rest = source.slice(lineStart);
   const lines = rest.split('\n').slice(0, maxLines);
-  return lines.join('\n');
+  let preview = lines.join('\n');
+  if (preview.length > SOURCE_PREVIEW_MAX_CHARS) {
+    preview = preview.slice(0, SOURCE_PREVIEW_MAX_CHARS) + '\n// ... truncated';
+  }
+  return preview;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

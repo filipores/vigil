@@ -9,7 +9,20 @@ export interface MonitorOptions {
 }
 
 const DEFAULT_INCLUDE = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'];
-const DEFAULT_EXCLUDE = ['**/node_modules/**', '**/dist/**', '**/.next/**'];
+const DEFAULT_EXCLUDE = [
+  '**/node_modules/**',
+  '**/dist/**',
+  '**/.next/**',
+  '**/.venv/**',
+  '**/venv/**',
+  '**/__pycache__/**',
+  '**/.git/**',
+  '**/build/**',
+  '**/coverage/**',
+  '**/.output/**',
+  '**/.nuxt/**',
+  '**/.svelte-kit/**',
+];
 
 export function monitor(options: MonitorOptions): { stop: () => void } {
   const client = new WsClient(options.serverUrl);

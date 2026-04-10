@@ -27,10 +27,14 @@
     violationsMap?: Map<string, RuleViolation[]>;
   } = $props();
 
+  const GRAPH_HARD_CAP = 2000;
+
   let containerEl: HTMLDivElement;
   let canvasEl: HTMLCanvasElement;
   let graph: ReturnType<typeof createForceGraph> | null = null;
   let resizeObserver: ResizeObserver | null = null;
+
+  let tooManyNodes = $derived(functions.length > GRAPH_HARD_CAP);
 
   function resizeCanvas() {
     if (!containerEl || !canvasEl) return;
@@ -52,22 +56,24 @@
     resizeObserver = new ResizeObserver(resizeCanvas);
     resizeObserver.observe(containerEl);
 
-    graph = createForceGraph({
-      canvas: canvasEl,
-      onNodeClick: onSelectFunction,
-      canvasMode,
-      onNodeDrag: onPinNode,
-    });
+    if (!tooManyNodes) {
+      graph = createForceGraph({
+        canvas: canvasEl,
+        onNodeClick: onSelectFunction,
+        canvasMode,
+        onNodeDrag: onPinNode,
+      });
 
-    graph.update({
-      nodes: functions,
-      edges,
-      canvasLayout,
-      selectedId,
-      highlightedIds,
-      analysisMap,
-      violationsMap,
-    });
+      graph.update({
+        nodes: functions,
+        edges,
+        canvasLayout,
+        selectedId,
+        highlightedIds,
+        analysisMap,
+        violationsMap,
+      });
+    }
   });
 
   onDestroy(() => {
@@ -80,6 +86,25 @@
   }
 
   $effect(() => {
+    if (tooManyNodes) {
+      // Destroy existing graph if node count grew past the cap
+      if (graph) {
+        graph.destroy();
+        graph = null;
+      }
+      return;
+    }
+
+    // Lazily create graph when scope reduces count below cap
+    if (!graph && canvasEl) {
+      graph = createForceGraph({
+        canvas: canvasEl,
+        onNodeClick: onSelectFunction,
+        canvasMode,
+        onNodeDrag: onPinNode,
+      });
+    }
+
     if (graph) {
       graph.updateCallbacks(onSelectFunction, canvasMode, onPinNode);
       graph.update({
@@ -105,7 +130,20 @@
       Reset View
     </button>
   {/if}
-  {#if functions.length > 300}
+  {#if tooManyNodes}
+    <div class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="text-text-dim opacity-40">
+        <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="1" />
+        <path d="M10 16h12M16 10v12" stroke="currentColor" stroke-width="1" opacity="0.5" />
+      </svg>
+      <span class="text-[12px] text-text-dim">
+        {functions.length} functions tracked — too many to graph.
+      </span>
+      <span class="text-[11px] text-text-dim">
+        Use the file tree, category filter, or Cmd+K search to scope.
+      </span>
+    </div>
+  {:else if functions.length > 300}
     <div class="absolute top-2 left-1/2 -translate-x-1/2 text-sm text-text-secondary pointer-events-none">
       {functions.length} functions tracked — showing graph. Use filters or focus mode to scope.
     </div>
