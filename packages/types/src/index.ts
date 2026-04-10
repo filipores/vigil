@@ -5,6 +5,7 @@ export type { CanvasLayout, PinnedPosition, CanvasGroup, CanvasAnnotation } from
 export type { CanvasCommand, CreateGroupCommand, AddToGroupCommand, MoveNodeCommand, AddAnnotationCommand, ClearGroupCommand } from './canvas-command.js';
 export type { FileChangeType, FileChange } from './file.js';
 export type { AgentContext, AgentCommand } from './command.js';
+export type { AnalysisConcern, AnalysisResult, AnalysisTriggerRequest, AnalysisStatus } from './analysis.js';
 export type {
   WsFunctionDiscovered,
   WsFunctionUpdated,
@@ -12,5 +13,9 @@ export type {
   WsFileChanged,
   WsStateSnapshot,
   WsEdgesUpdated,
+  WsAnalysisStarted,
+  WsAnalysisProgress,
+  WsAnalysisCompleted,
+  WsAnalysisFailed,
   WsMessage,
 } from './messages.js';
