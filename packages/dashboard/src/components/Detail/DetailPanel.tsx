@@ -20,9 +20,10 @@ interface DetailPanelProps {
   onStopAnalysis: (runId: string) => void;
   onDebugFunction?: (opts: { filePath: string; line: number; functionName: string }) => void;
   onDebugCallChain?: (chain: Array<{ filePath: string; line: number; name: string }>) => void;
+  onFocusFunction?: (functionId: string) => void;
 }
 
-export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edges, allFunctions, onSelectFunction, analysisResults, activeAnalysisRun, onTriggerAnalysis, onStopAnalysis, onDebugFunction, onDebugCallChain }: DetailPanelProps) {
+export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edges, allFunctions, onSelectFunction, analysisResults, activeAnalysisRun, onTriggerAnalysis, onStopAnalysis, onDebugFunction, onDebugCallChain, onFocusFunction }: DetailPanelProps) {
   const handleAskAgent = () => {
     if (!fn) return;
     onAskAgent({
@@ -113,6 +114,19 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
               className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-secondary border border-border-subtle rounded hover:bg-surface-raised/50 hover:text-text transition-colors duration-150"
             >
               Debug Chain
+            </button>
+          )}
+          {onFocusFunction && (
+            <button
+              onClick={() => onFocusFunction(fn.id)}
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-secondary border border-border-subtle rounded hover:bg-surface-raised/50 hover:text-text transition-colors duration-150"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1" />
+                <circle cx="5" cy="5" r="1.5" fill="currentColor" />
+                <path d="M5 0v2M5 8v2M0 5h2M8 5h2" stroke="currentColor" strokeWidth="0.8" />
+              </svg>
+              Focus
             </button>
           )}
         </div>

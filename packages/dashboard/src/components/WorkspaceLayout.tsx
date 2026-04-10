@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { AgentContext, FunctionCategory, CanvasLayout, AnalysisResult, WsMessage } from '@agent-monitor/types';
 import { useFunctions } from '@/hooks/useFunctions';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useGitCommits } from '@/hooks/useGitCommits';
 import { useCanvasLayout } from '@/hooks/useCanvasLayout';
 import { useAnalysis } from '@/hooks/useAnalysis';
+import { useGraphScope } from '@/hooks/useGraphScope';
 import { WS_URL } from '@/lib/constants';
 import { SidebarTabs } from '@/components/Sidebar/SidebarTabs';
 import { FileTree } from '@/components/FileTree/FileTree';
 import { CategoryFilter } from '@/components/FileTree/CategoryFilter';
 import { FunctionGraph } from '@/components/Graph/FunctionGraph';
+import { GraphScopeBar } from '@/components/Graph/GraphScopeBar';
 import { CommitList } from '@/components/Commits/CommitList';
 import { DiffView } from '@/components/Commits/DiffView';
 import { DetailPanel } from '@/components/Detail/DetailPanel';
@@ -68,6 +70,53 @@ export function WorkspaceLayout() {
     isLoadingDiff,
   } = useGitCommits(functions);
 
+  const {
+    scopedFunctions,
+    scopedEdges,
+    scopeMode,
+    setFocusMode,
+    setCommitMode,
+    setCategoryMode,
+    clearScope,
+    isScoped,
+  } = useGraphScope({ functions, edges });
+
+  // Auto-scope: when highlightedFunctionIds changes (commit selected), enter commit scope
+  const prevHighlightedRef = useRef<Set<string>>(highlightedFunctionIds);
+  useEffect(() => {
+    if (highlightedFunctionIds !== prevHighlightedRef.current) {
+      prevHighlightedRef.current = highlightedFunctionIds;
+      if (highlightedFunctionIds.size > 0) {
+        setCommitMode(highlightedFunctionIds);
+      } else if (scopeMode.type === 'commit') {
+        clearScope();
+      }
+    }
+  }, [highlightedFunctionIds, setCommitMode, clearScope, scopeMode.type]);
+
+  // Auto-scope: when category filter changes, enter category scope
+  useEffect(() => {
+    if (selectedCategory) {
+      setCategoryMode(new Set([selectedCategory]));
+    } else if (scopeMode.type === 'category') {
+      clearScope();
+    }
+  }, [selectedCategory, setCategoryMode, clearScope, scopeMode.type]);
+
+  // Auto-scope: if >300 functions and no scope active, default to recent commit or first 300
+  const autoScopeAppliedRef = useRef(false);
+  useEffect(() => {
+    if (autoScopeAppliedRef.current) return;
+    if (functions.length <= 300) return;
+    if (isScoped) return;
+    // Wait for commits to load before deciding
+    if (commits.length > 0 && highlightedFunctionIds.size === 0) {
+      // Commits loaded but none selected — auto-select the most recent commit
+      selectCommit(commits[0].hash);
+      autoScopeAppliedRef.current = true;
+    }
+  }, [functions.length, isScoped, commits, highlightedFunctionIds.size, selectCommit]);
+
   const filteredFunctions = useMemo(
     () =>
       selectedCategory
@@ -107,9 +156,15 @@ export function WorkspaceLayout() {
     setIsAgentModalOpen(false);
   }, []);
 
+  const scopedIds = useMemo(
+    () => new Set(scopedFunctions.map((f) => f.id)),
+    [scopedFunctions],
+  );
+
   const analysisMap = useMemo(() => {
     const map = new Map<string, AnalysisResult[]>();
     for (const a of analyses) {
+      if (!scopedIds.has(a.functionId)) continue;
       const existing = map.get(a.functionId);
       if (existing) {
         existing.push(a);
@@ -118,7 +173,7 @@ export function WorkspaceLayout() {
       }
     }
     return map;
-  }, [analyses]);
+  }, [analyses, scopedIds]);
 
   const activeAnalysisRunForSelected = useMemo(
     () =>
@@ -261,17 +316,27 @@ export function WorkspaceLayout() {
               isLoading={isLoadingDiff}
             />
           ) : (
-            <FunctionGraph
-              functions={filteredFunctions}
-              edges={edges}
-              canvasLayout={canvasMode ? layout : EMPTY_CANVAS_LAYOUT}
-              selectedId={selectedId}
-              highlightedIds={highlightedFunctionIds}
-              onSelectFunction={handleSelectFunction}
-              onPinNode={canvasMode ? pinNode : undefined}
-              canvasMode={canvasMode}
-              analysisMap={analysisMap}
-            />
+            <>
+              <GraphScopeBar
+                scopeMode={scopeMode}
+                totalCount={functions.length}
+                scopedCount={scopedFunctions.length}
+                clearScope={clearScope}
+                functions={functions}
+                commitHash={selectedHash}
+              />
+              <FunctionGraph
+                functions={scopedFunctions}
+                edges={scopedEdges}
+                canvasLayout={canvasMode ? layout : EMPTY_CANVAS_LAYOUT}
+                selectedId={selectedId}
+                highlightedIds={highlightedFunctionIds}
+                onSelectFunction={handleSelectFunction}
+                onPinNode={canvasMode ? pinNode : undefined}
+                canvasMode={canvasMode}
+                analysisMap={analysisMap}
+              />
+            </>
           )}
         </main>
 
@@ -292,6 +357,7 @@ export function WorkspaceLayout() {
             onStopAnalysis={stopAnalysis}
             onDebugFunction={handleDebugFunction}
             onDebugCallChain={handleDebugCallChain}
+            onFocusFunction={setFocusMode}
           />
         )}
 
