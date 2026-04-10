@@ -3,7 +3,10 @@ import type { WSContext } from 'hono/ws';
 import { createNodeWebSocket } from '@hono/node-ws';
 import type { WsMessage } from '@agent-monitor/types';
 import { getAllFunctions, getAllFiles, getAllEdges, upsertFunction, removeFunction, upsertFile, upsertFileEdges } from './store.js';
+import { getAutoAnalysis } from './analysis/autoInstance.js';
 import { AnalysisEngine, getAllAnalyses, setAnalysisEngine } from './analysis/index.js';
+import { createAutoAnalysis } from './analysis/auto.js';
+import { setAutoAnalysis } from './analysis/autoInstance.js';
 
 type ClientType = 'sdk' | 'dashboard';
 
@@ -48,6 +51,10 @@ export function setupWebSocket(app: Hono) {
   const engine = new AnalysisEngine(broadcast);
   setAnalysisEngine(engine);
 
+  // Set up auto-analysis
+  const autoAnalysis = createAutoAnalysis(engine);
+  setAutoAnalysis(autoAnalysis);
+
   return { injectWebSocket, wsHandler };
 }
 
@@ -56,6 +63,7 @@ function handleSdkMessage(msg: WsMessage): void {
     case 'function-discovered':
     case 'function-updated':
       upsertFunction(msg.payload);
+      getAutoAnalysis()?.onFunctionEvent(msg.payload.id);
       break;
     case 'function-removed':
       removeFunction(msg.payload.id);

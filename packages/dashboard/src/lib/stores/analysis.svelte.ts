@@ -3,6 +3,7 @@ import { fetchAnalysisResults, triggerAnalysisRequest, stopAnalysisRequest } fro
 
 let analyses = $state<Map<string, AnalysisResult>>(new Map());
 let activeRuns = $state<Map<string, AnalysisStatus>>(new Map());
+let streamingOutput = $state<Map<string, string>>(new Map());
 
 let initialized = false;
 
@@ -30,6 +31,10 @@ export function handleAnalysisMessage(msg: WsMessage) {
         ...incoming,
         functionIds: incoming.functionIds ?? existing?.functionIds,
       });
+      if (msg.type === 'analysis-progress' && incoming.progress) {
+        const prev = streamingOutput.get(incoming.runId) ?? '';
+        streamingOutput = new Map(streamingOutput).set(incoming.runId, prev + incoming.progress);
+      }
       break;
     }
     case 'analysis-completed': {
@@ -39,12 +44,18 @@ export function handleAnalysisMessage(msg: WsMessage) {
       const nextAnalyses = new Map(analyses);
       for (const r of msg.payload.results) nextAnalyses.set(r.id, r);
       analyses = nextAnalyses;
+      const nextStream = new Map(streamingOutput);
+      nextStream.delete(msg.payload.runId);
+      streamingOutput = nextStream;
       break;
     }
     case 'analysis-failed': {
       const next = new Map(activeRuns);
       next.delete(msg.payload.runId);
       activeRuns = next;
+      const nextStreamFail = new Map(streamingOutput);
+      nextStreamFail.delete(msg.payload.runId);
+      streamingOutput = nextStreamFail;
       break;
     }
   }
@@ -68,13 +79,19 @@ export function getAnalysesForFunction(functionId: string): AnalysisResult[] {
   return Array.from(analyses.values()).filter((a) => a.functionId === functionId);
 }
 
+export function getStreamingOutput(runId: string): string {
+  return streamingOutput.get(runId) ?? '';
+}
+
 export function getAnalysisStore() {
   return {
     get analyses() { return Array.from(analyses.values()); },
     get activeRuns() { return Array.from(activeRuns.values()); },
+    get streamingOutput() { return streamingOutput; },
     handleAnalysisMessage,
     triggerAnalysis,
     stopAnalysis,
     getAnalysesForFunction,
+    getStreamingOutput,
   };
 }

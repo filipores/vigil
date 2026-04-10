@@ -9,6 +9,7 @@ export interface RunAnalysisOpts {
   allFunctions: FunctionInfo[];
   projectRoot: string;
   taskName: string;
+  onProgress?: (chunk: string) => void;
 }
 
 export interface AnalysisRun {
@@ -17,7 +18,7 @@ export interface AnalysisRun {
 }
 
 export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
-  const { functions, edges, allFunctions, projectRoot, taskName } = opts;
+  const { functions, edges, allFunctions, projectRoot, taskName, onProgress } = opts;
 
   // Resolve 1-hop neighbors
   const targetIds = new Set(functions.map((f) => f.id));
@@ -57,7 +58,9 @@ export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
     }, 120_000);
 
     child.stdout!.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString();
+      const text = chunk.toString();
+      stdout += text;
+      if (onProgress) onProgress(text);
     });
     child.stderr!.on('data', (chunk: Buffer) => {
       stderr += chunk.toString();

@@ -88,6 +88,20 @@ export async function stopAnalysisRequest(runId: string): Promise<{ success: boo
   return res.json();
 }
 
+export async function setAutoAnalysis(enabled: boolean): Promise<void> {
+  await fetch(`${API_BASE}/api/analysis/auto`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function getAutoAnalysis(): Promise<{ enabled: boolean }> {
+  const res = await fetch(`${API_BASE}/api/analysis/auto`);
+  if (!res.ok) return { enabled: false };
+  return res.json();
+}
+
 export async function launchDebugSession(opts: {
   filePath: string;
   line: number;

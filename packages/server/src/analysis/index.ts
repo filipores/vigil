@@ -3,3 +3,6 @@ export { initAnalysisStore, saveAnalysis, getAnalysis, getAnalysesByFunction, ge
 export { buildAnalysisPrompt } from './prompts.js';
 export { startAnalysis } from './runner.js';
 export { getAnalysisEngine, setAnalysisEngine } from './engineInstance.js';
+export { createAutoAnalysis } from './auto.js';
+export type { AutoAnalysis } from './auto.js';
+export { getAutoAnalysis, setAutoAnalysis } from './autoInstance.js';

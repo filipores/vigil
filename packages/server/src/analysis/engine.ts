@@ -46,12 +46,20 @@ export class AnalysisEngine {
       payload: { runId, status: 'running', progress: 'Starting analysis...', functionIds },
     });
 
+    const onProgress = (chunk: string) => {
+      this.broadcast({
+        type: 'analysis-progress',
+        payload: { runId, status: 'running', progress: chunk, functionIds },
+      });
+    };
+
     const { child, promise } = startAnalysis({
       functions,
       edges,
       allFunctions,
       projectRoot,
       taskName: task,
+      onProgress,
     });
 
     this.running.set(runId, { child, functionIds });
