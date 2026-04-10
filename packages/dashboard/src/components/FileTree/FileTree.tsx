@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import type { FileChange, FunctionInfo } from '@agent-monitor/types';
 import { FileTreeNode } from './FileTreeNode';
+import { computeCommonRoot } from './computeCommonRoot';
 
 interface FileTreeProps {
   files: FileChange[];
@@ -18,11 +19,14 @@ interface TreeNode {
   file: FileChange | null;
 }
 
-function buildTree(files: FileChange[]): TreeNode {
+function buildTree(files: FileChange[], commonRoot: string): TreeNode {
   const root: TreeNode = { name: '', path: '', children: new Map(), file: null };
 
   for (const file of files) {
-    const parts = file.filePath.split('/').filter(Boolean);
+    const relativePath = file.filePath.startsWith(commonRoot)
+      ? file.filePath.slice(commonRoot.length)
+      : file.filePath;
+    const parts = relativePath.split('/').filter(Boolean);
     let current = root;
 
     for (let i = 0; i < parts.length; i++) {
@@ -45,7 +49,11 @@ function buildTree(files: FileChange[]): TreeNode {
 }
 
 export function FileTree({ files, functions, highlightedIds, onSelectFunction }: FileTreeProps) {
-  const tree = useMemo(() => buildTree(files), [files]);
+  const commonRoot = useMemo(
+    () => computeCommonRoot(files.map((f) => f.filePath)),
+    [files],
+  );
+  const tree = useMemo(() => buildTree(files, commonRoot), [files, commonRoot]);
 
   const functionsByFile = useMemo(() => {
     const map = new Map<string, FunctionInfo[]>();

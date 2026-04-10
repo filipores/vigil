@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { FunctionInfo, AgentContext, DataFlowEdge, AnalysisResult, AnalysisStatus } from '@agent-monitor/types';
 import { CodePreview } from './CodePreview';
 import { AnalysisSection } from '@/components/Analysis/AnalysisSection';
+import { computeCommonRoot } from '@/components/FileTree/computeCommonRoot';
 
 interface DetailPanelProps {
   fn: FunctionInfo | null;
@@ -56,9 +57,22 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
     [edges, fn, allFunctions],
   );
 
+  const commonRoot = useMemo(
+    () => computeCommonRoot(allFunctions.map((f) => f.filePath)),
+    [allFunctions],
+  );
+
+  const toRelative = useCallback(
+    (absPath: string) =>
+      commonRoot && absPath.startsWith(commonRoot)
+        ? absPath.slice(commonRoot.length)
+        : absPath,
+    [commonRoot],
+  );
+
   if (!isOpen || !fn) return null;
 
-  const shortPath = fn.filePath.split('/').slice(-3).join('/');
+  const shortPath = toRelative(fn.filePath);
 
   return (
     <div className="w-80 border-l border-border-subtle bg-surface overflow-y-auto shrink-0 animate-slide-in">
