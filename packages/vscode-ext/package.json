@@ -1,0 +1,37 @@
+{
+  "name": "vigil",
+  "displayName": "Vigil - AI Code Monitor",
+  "description": "Real-time monitoring dashboard for AI-generated code",
+  "version": "0.1.0",
+  "publisher": "vigil",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "vigil.openDashboard", "title": "Vigil: Open Dashboard" },
+      { "command": "vigil.analyzeFunction", "title": "Vigil: Analyze Current Function" },
+      { "command": "vigil.debugFunction", "title": "Vigil: Debug Current Function" },
+      { "command": "vigil.stop", "title": "Vigil: Stop Server" },
+      { "command": "vigil.start", "title": "Vigil: Start Server" }
+    ],
+    "configuration": {
+      "title": "Vigil",
+      "properties": {
+        "vigil.autoStart": { "type": "boolean", "default": true, "description": "Auto-start Vigil when workspace opens" },
+        "vigil.serverPort": { "type": "number", "default": 3001, "description": "Port for the Vigil server" },
+        "vigil.dashboardPort": { "type": "number", "default": 3000, "description": "Port for the Vigil dashboard" }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "npm run build -- --watch"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}
