@@ -75,6 +75,9 @@ export function useForceGraph({
   const graphNodesRef = useRef<GraphNode[]>([]);
   const hoveredIdRef = useRef<string | null>(null);
 
+  const analysisMapRef = useRef(analysisMap);
+  useEffect(() => { analysisMapRef.current = analysisMap; }, [analysisMap]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -328,8 +331,8 @@ export function useForceGraph({
           }
 
           // Analysis badge
-          if (analysisMap) {
-            const results = analysisMap.get(node.id);
+          if (analysisMapRef.current) {
+            const results = analysisMapRef.current.get(node.id);
             if (results && results.length > 0) {
               const concerns = results.flatMap((r) => r.concerns);
               const hasConcerns = concerns.length > 0;
@@ -469,5 +472,5 @@ export function useForceGraph({
         canvas.removeEventListener('mousemove', handleMove);
       };
     }
-  }, [canvasRef, nodes, edges, canvasLayout, selectedId, highlightedIds, onNodeClick, canvasMode, onNodeDrag, analysisMap]);
+  }, [canvasRef, nodes, edges, canvasLayout, selectedId, highlightedIds, onNodeClick, canvasMode, onNodeDrag]);
 }

@@ -88,20 +88,20 @@ export function WorkspaceLayout() {
       prevHighlightedRef.current = highlightedFunctionIds;
       if (highlightedFunctionIds.size > 0) {
         setCommitMode(highlightedFunctionIds);
-      } else if (scopeMode.type === 'commit') {
+      } else {
         clearScope();
       }
     }
-  }, [highlightedFunctionIds, setCommitMode, clearScope, scopeMode.type]);
+  }, [highlightedFunctionIds, setCommitMode, clearScope]);
 
   // Auto-scope: when category filter changes, enter category scope
   useEffect(() => {
     if (selectedCategory) {
       setCategoryMode(new Set([selectedCategory]));
-    } else if (scopeMode.type === 'category') {
+    } else {
       clearScope();
     }
-  }, [selectedCategory, setCategoryMode, clearScope, scopeMode.type]);
+  }, [selectedCategory, setCategoryMode, clearScope]);
 
   // Auto-scope: if >300 functions and no scope active, default to recent commit or first 300
   const autoScopeAppliedRef = useRef(false);
@@ -180,7 +180,7 @@ export function WorkspaceLayout() {
       activeRuns.find(
         (r) =>
           (r.status === 'running' || r.status === 'queued') &&
-          (!selectedId || (r.functionIds && r.functionIds.includes(selectedId))),
+          (selectedId && r.functionIds && r.functionIds.includes(selectedId)),
       ),
     [activeRuns, selectedId],
   );
