@@ -61,6 +61,11 @@ export function FunctionGraph({ functions, edges, canvasLayout, selectedId, high
   return (
     <div ref={containerRef} className="w-full h-full relative bg-void">
       <canvas ref={canvasRef} className="absolute inset-0" />
+      {functions.length > 300 && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 text-sm text-text-secondary pointer-events-none">
+          {functions.length} functions tracked — showing graph. Use filters or focus mode to scope.
+        </div>
+      )}
       {functions.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="text-text-dim opacity-40">

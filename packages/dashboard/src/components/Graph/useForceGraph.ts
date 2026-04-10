@@ -73,6 +73,7 @@ export function useForceGraph({
 }: UseForceGraphOptions) {
   const simRef = useRef<Simulation<GraphNode, never> | null>(null);
   const graphNodesRef = useRef<GraphNode[]>([]);
+  const hoveredIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -135,17 +136,33 @@ export function useForceGraph({
       .filter((e) => nodeIdSet.has(e.sourceId) && nodeIdSet.has(e.targetId))
       .map((e) => ({ source: e.sourceId, target: e.targetId, sourceId: e.sourceId, targetId: e.targetId }));
 
+    const isLarge = graphNodes.length > 500;
+    const isVeryLarge = graphNodes.length > 1000;
+    const isScaled = graphNodes.length > 300;
+
     const simulation = forceSimulation<GraphNode>(graphNodes)
-      .force('charge', forceManyBody().strength(-180))
+      .force('charge', forceManyBody().strength(isLarge ? -80 : -180))
       .force('center', forceCenter(width / 2, height / 2).strength(0.05))
-      .force('collide', forceCollide<GraphNode>(48))
+      .force('collide', forceCollide<GraphNode>(isLarge ? 24 : 48))
       .force(
         'link',
         forceLink(linkData)
           .id((n: SimulationNodeDatum & { id?: string }) => (n as GraphNode).id)
           .distance(120)
           .strength(0.3),
-      )
+      );
+
+    if (isLarge) {
+      simulation.alphaDecay(0.05).alphaMin(0.05);
+    }
+    if (isVeryLarge) {
+      simulation.velocityDecay(0.6);
+    }
+
+    // Build set of pinned node IDs for label filtering at scale
+    const pinnedIds = new Set(canvasLayout.positions.map((p) => p.functionId));
+
+    simulation
       .on('tick', () => {
         const dpr = window.devicePixelRatio || 1;
         ctx.save();
@@ -195,7 +212,12 @@ export function useForceGraph({
           ctx.restore();
         }
 
-        // Draw edges
+        // Draw edges — batched by active/inactive for fewer draw calls
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = 'rgba(94, 196, 196, 0.25)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        const activeEdges: Array<{ sx: number; sy: number; tx: number; ty: number }> = [];
         for (const link of linkData) {
           const src = typeof link.source === 'object' ? link.source : null;
           const tgt = typeof link.target === 'object' ? link.target : null;
@@ -205,15 +227,27 @@ export function useForceGraph({
           const tx = (tgt as SimulationNodeDatum).x ?? 0;
           const ty = (tgt as SimulationNodeDatum).y ?? 0;
           const isActive = link.sourceId === selectedId || link.targetId === selectedId;
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(tx, ty);
-          ctx.strokeStyle = isActive ? 'rgba(94, 196, 196, 0.6)' : 'rgba(94, 196, 196, 0.25)';
-          ctx.lineWidth = isActive ? 1 : 0.5;
-          ctx.globalAlpha = isActive ? 0.9 : 0.7;
-          ctx.stroke();
-          ctx.globalAlpha = 1;
+          if (isActive) {
+            activeEdges.push({ sx, sy, tx, ty });
+          } else {
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(tx, ty);
+          }
         }
+        ctx.stroke();
+
+        if (activeEdges.length > 0) {
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = 'rgba(94, 196, 196, 0.6)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (const e of activeEdges) {
+            ctx.moveTo(e.sx, e.sy);
+            ctx.lineTo(e.tx, e.ty);
+          }
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
 
         // Draw nodes
         for (const node of graphNodes) {
@@ -227,28 +261,44 @@ export function useForceGraph({
 
           ctx.globalAlpha = node.opacity;
 
-          // Glow ring for new nodes
+          // Glow ring for new nodes (skip expensive gradients at scale)
           if (node.age < 120) {
-            const glowAlpha = (1 - node.age / 120) * 0.25;
-            const glowR = R + 8 + (node.age / 120) * 12;
-            const gradient = ctx.createRadialGradient(x, y, R, x, y, glowR);
-            gradient.addColorStop(0, `rgba(80, 200, 200, ${glowAlpha})`);
-            gradient.addColorStop(1, 'rgba(80, 200, 200, 0)');
-            ctx.beginPath();
-            ctx.arc(x, y, glowR, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
+            if (isScaled) {
+              const glowAlpha = (1 - node.age / 120) * 0.25;
+              const glowR = R + 8 + (node.age / 120) * 12;
+              ctx.beginPath();
+              ctx.arc(x, y, glowR, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(80, 200, 200, ${glowAlpha * 0.5})`;
+              ctx.fill();
+            } else {
+              const glowAlpha = (1 - node.age / 120) * 0.25;
+              const glowR = R + 8 + (node.age / 120) * 12;
+              const gradient = ctx.createRadialGradient(x, y, R, x, y, glowR);
+              gradient.addColorStop(0, `rgba(80, 200, 200, ${glowAlpha})`);
+              gradient.addColorStop(1, 'rgba(80, 200, 200, 0)');
+              ctx.beginPath();
+              ctx.arc(x, y, glowR, 0, Math.PI * 2);
+              ctx.fillStyle = gradient;
+              ctx.fill();
+            }
           }
 
-          // Selected glow
+          // Selected glow (skip gradient at scale)
           if (isSelected) {
-            const gradient = ctx.createRadialGradient(x, y, R, x, y, R + 20);
-            gradient.addColorStop(0, SIGNAL_GLOW);
-            gradient.addColorStop(1, 'rgba(80, 200, 200, 0)');
-            ctx.beginPath();
-            ctx.arc(x, y, R + 20, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
+            if (isScaled) {
+              ctx.beginPath();
+              ctx.arc(x, y, R + 20, 0, Math.PI * 2);
+              ctx.fillStyle = SIGNAL_GLOW;
+              ctx.fill();
+            } else {
+              const gradient = ctx.createRadialGradient(x, y, R, x, y, R + 20);
+              gradient.addColorStop(0, SIGNAL_GLOW);
+              gradient.addColorStop(1, 'rgba(80, 200, 200, 0)');
+              ctx.beginPath();
+              ctx.arc(x, y, R + 20, 0, Math.PI * 2);
+              ctx.fillStyle = gradient;
+              ctx.fill();
+            }
           }
 
           // Node circle
@@ -266,13 +316,16 @@ export function useForceGraph({
           ctx.fillStyle = isSelected ? SIGNAL : isHighlighted ? WARM_DOT : 'rgba(255, 255, 255, 0.2)';
           ctx.fill();
 
-          // Label
-          ctx.fillStyle = isSelected ? LABEL_SELECTED : isHighlighted ? WARM_LABEL : LABEL_COLOR;
-          ctx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          const label = node.name.length > 16 ? node.name.slice(0, 15) + '\u2026' : node.name;
-          ctx.fillText(label, x, y + R + 6);
+          // Label — skip for non-important nodes at scale
+          const showLabel = !isScaled || isSelected || node.id === hoveredIdRef.current || pinnedIds.has(node.id);
+          if (showLabel) {
+            ctx.fillStyle = isSelected ? LABEL_SELECTED : isHighlighted ? WARM_LABEL : LABEL_COLOR;
+            ctx.font = '500 10px "IBM Plex Mono", ui-monospace, monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const label = node.name.length > 16 ? node.name.slice(0, 15) + '\u2026' : node.name;
+            ctx.fillText(label, x, y + R + 6);
+          }
 
           // Analysis badge
           if (analysisMap) {
@@ -340,7 +393,9 @@ export function useForceGraph({
           dragging.node.fy = my;
           moved = true;
         } else {
-          canvas.style.cursor = findNode(mx, my) ? 'grab' : 'default';
+          const hovered = findNode(mx, my);
+          hoveredIdRef.current = hovered ? hovered.id : null;
+          canvas.style.cursor = hovered ? 'grab' : 'default';
         }
       };
 
@@ -390,18 +445,19 @@ export function useForceGraph({
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        let hovering = false;
+        let hoveredNode: GraphNode | null = null;
 
         for (const node of graphNodes) {
           const dx = (node.x ?? 0) - mx;
           const dy = (node.y ?? 0) - my;
           if (dx * dx + dy * dy < (R + 8) * (R + 8)) {
-            hovering = true;
+            hoveredNode = node;
             break;
           }
         }
 
-        canvas.style.cursor = hovering ? 'pointer' : 'default';
+        hoveredIdRef.current = hoveredNode ? hoveredNode.id : null;
+        canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
       };
 
       canvas.addEventListener('click', handleClick);

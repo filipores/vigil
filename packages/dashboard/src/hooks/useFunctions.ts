@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { FunctionInfo, FileChange, DataFlowEdge, WsMessage } from '@agent-monitor/types';
 import { fetchFunctions, fetchFiles, fetchEdges } from '@/lib/api';
 
@@ -70,7 +70,7 @@ export function useFunctions() {
     }
   }, []);
 
-  const functions = Array.from(functionsMap.values());
+  const functions = useMemo(() => Array.from(functionsMap.values()), [functionsMap]);
 
   const selectFunction = useCallback((id: string | null) => {
     setSelectedId(id);
