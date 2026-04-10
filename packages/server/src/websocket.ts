@@ -3,6 +3,7 @@ import type { WSContext } from 'hono/ws';
 import { createNodeWebSocket } from '@hono/node-ws';
 import type { WsMessage } from '@agent-monitor/types';
 import { getAllFunctions, getAllFiles, getAllEdges, upsertFunction, removeFunction, upsertFile, upsertFileEdges } from './store.js';
+import { AnalysisEngine, getAllAnalyses, setAnalysisEngine } from './analysis/index.js';
 
 type ClientType = 'sdk' | 'dashboard';
 
@@ -26,9 +27,9 @@ export function setupWebSocket(app: Hono) {
 
       if (data.type === 'dashboard-hello') {
         clientTypes.set(ws, 'dashboard');
-        const snapshot: WsMessage = {
-          type: 'state-snapshot',
-          payload: { functions: getAllFunctions(), files: getAllFiles(), edges: getAllEdges() },
+        const snapshot = {
+          type: 'state-snapshot' as const,
+          payload: { functions: getAllFunctions(), files: getAllFiles(), edges: getAllEdges(), analyses: getAllAnalyses() },
         };
         ws.send(JSON.stringify(snapshot));
         return;
@@ -42,6 +43,10 @@ export function setupWebSocket(app: Hono) {
       clients.delete(ws);
     },
   }));
+
+  // Instantiate the analysis engine with access to broadcast
+  const engine = new AnalysisEngine(broadcast);
+  setAnalysisEngine(engine);
 
   return { injectWebSocket, wsHandler };
 }
