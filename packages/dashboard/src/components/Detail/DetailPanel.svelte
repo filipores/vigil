@@ -15,6 +15,7 @@
     onSelectFunction,
     analysisResults = [],
     activeAnalysisRun,
+    analysisStreamingText = '',
     onTriggerAnalysis,
     onStopAnalysis,
     onDebugFunction,
@@ -31,6 +32,7 @@
     onSelectFunction: (id: string) => void;
     analysisResults?: AnalysisResult[];
     activeAnalysisRun?: AnalysisStatus;
+    analysisStreamingText?: string;
     onTriggerAnalysis: (functionId: string, taskName?: string) => void;
     onStopAnalysis: (runId: string) => void;
     onDebugFunction?: (opts: { filePath: string; line: number; functionName: string }) => void;
@@ -240,6 +242,7 @@
       <AnalysisSection
         analysisResults={analysisResults}
         activeRun={activeAnalysisRun}
+        streamingText={analysisStreamingText}
         onTrigger={(taskName) => onTriggerAnalysis(fn!.id, taskName)}
         onStop={onStopAnalysis}
       />

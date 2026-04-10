@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { AnalysisResult, AnalysisStatus } from '@agent-monitor/types';
+  import { getAutoAnalysis, setAutoAnalysis } from '$lib/api';
 
   const TASK_OPTIONS = [
     { value: 'function-review', label: 'Code Review' },
@@ -11,17 +13,45 @@
   let {
     analysisResults,
     activeRun,
+    streamingText = '',
     onTrigger,
     onStop,
   }: {
     analysisResults: AnalysisResult[];
     activeRun: AnalysisStatus | undefined;
+    streamingText?: string;
     onTrigger: (taskName?: string) => void;
     onStop: (runId: string) => void;
   } = $props();
 
   let selectedTask = $state('function-review');
+  let autoEnabled = $state(false);
   let sorted = $derived([...analysisResults].sort((a, b) => b.timestamp - a.timestamp));
+
+  let streamingContainer: HTMLPreElement | undefined = $state();
+
+  // Auto-scroll streaming output to bottom
+  $effect(() => {
+    if (streamingText && streamingContainer) {
+      streamingContainer.scrollTop = streamingContainer.scrollHeight;
+    }
+  });
+
+  onMount(() => {
+    getAutoAnalysis()
+      .then((res) => { autoEnabled = res.enabled; })
+      .catch(() => { /* ignore */ });
+  });
+
+  async function toggleAuto() {
+    const next = !autoEnabled;
+    autoEnabled = next;
+    try {
+      await setAutoAnalysis(next);
+    } catch {
+      autoEnabled = !next;
+    }
+  }
 
   const SEVERITY_CLASS: Record<string, string> = {
     info: 'text-text-secondary',
@@ -90,6 +120,23 @@
             {/each}
           </select>
         </div>
+        <!-- Auto toggle -->
+        <button
+          onclick={toggleAuto}
+          class="flex items-center gap-1 px-1.5 py-1 text-[10px] font-medium rounded border transition-colors duration-150 self-end {autoEnabled
+            ? 'text-signal border-signal/30 bg-signal/10'
+            : 'text-text-dim border-border-subtle hover:text-text'}"
+          title={autoEnabled ? 'Auto-analysis enabled' : 'Auto-analysis disabled'}
+        >
+          <span
+            class="inline-block w-5 h-3 rounded-full relative transition-colors duration-150 {autoEnabled ? 'bg-signal/30' : 'bg-surface-bright'}"
+          >
+            <span
+              class="absolute top-0.5 w-2 h-2 rounded-full transition-all duration-150 {autoEnabled ? 'left-2.5 bg-signal' : 'left-0.5 bg-text-dim'}"
+            ></span>
+          </span>
+          Auto
+        </button>
         <button
           onclick={() => onTrigger(selectedTask)}
           class="px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150 self-end"
@@ -109,11 +156,16 @@
       </span>
       <span class="text-[11px] text-signal">
         {activeRun.status === 'queued' ? 'Queued' : 'Running'}
-        {#if activeRun.progress}
-          <span class="text-text-dim ml-1">— {activeRun.progress}</span>
-        {/if}
       </span>
     </div>
+
+    <!-- Streaming output -->
+    {#if streamingText}
+      <pre
+        bind:this={streamingContainer}
+        class="font-mono text-sm text-text-secondary bg-surface border border-border-subtle rounded px-3 py-2 mb-3 max-h-[200px] overflow-y-auto whitespace-pre-wrap break-words"
+      >{streamingText}</pre>
+    {/if}
   {/if}
 
   <!-- Results -->

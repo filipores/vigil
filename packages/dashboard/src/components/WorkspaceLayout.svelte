@@ -5,7 +5,7 @@
   import { initWebSocket, getWebSocketStore } from '$lib/stores/websocket.svelte';
   import { initGitCommits, getGitCommitsStore, selectCommit, clearCommit } from '$lib/stores/gitCommits.svelte';
   import { getCanvasLayoutStore, pinNode, applyCommand, clearLayout } from '$lib/stores/canvasLayout.svelte';
-  import { initAnalysis, getAnalysisStore, handleAnalysisMessage, triggerAnalysis, stopAnalysis, getAnalysesForFunction } from '$lib/stores/analysis.svelte';
+  import { initAnalysis, getAnalysisStore, handleAnalysisMessage, triggerAnalysis, stopAnalysis, getAnalysesForFunction, getStreamingOutput } from '$lib/stores/analysis.svelte';
   import { getGraphScopeStore, computeScope, setFocusMode, setCommitMode, setCategoryMode, clearScope } from '$lib/stores/graphScope.svelte';
   import { WS_URL } from '$lib/constants';
   import { openInEditor, launchDebugSession } from '$lib/api';
@@ -79,6 +79,10 @@
         (r.status === 'running' || r.status === 'queued') &&
         (fnStore.selectedId && r.functionIds && r.functionIds.includes(fnStore.selectedId)),
     ),
+  );
+
+  let analysisStreamingText = $derived(
+    activeAnalysisRunForSelected ? getStreamingOutput(activeAnalysisRunForSelected.runId) : '',
   );
 
   // Auto-scope tracking
@@ -328,6 +332,7 @@
         onSelectFunction={handleSelectFunction}
         analysisResults={getAnalysesForFunction(selectedFunction.id)}
         activeAnalysisRun={activeAnalysisRunForSelected}
+        analysisStreamingText={analysisStreamingText}
         onTriggerAnalysis={handleTriggerAnalysis}
         onStopAnalysis={stopAnalysis}
         onDebugFunction={handleDebugFunction}
