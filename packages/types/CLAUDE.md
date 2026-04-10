@@ -22,8 +22,8 @@ Everything re-exported through `index.ts` via `export type { ... } from './modul
 ## Build
 
 ```
-pnpm build        # tsc -b (composite project references from root tsconfig)
-pnpm dev          # tsc -b --watch
+npm run build      # tsc -b (composite project references from root tsconfig)
+npm run dev        # tsc -b --watch
 ```
 
 Compiles to ESM (`dist/`) with `.d.ts` declarations. Consumed via `@agent-monitor/types` workspace alias.
