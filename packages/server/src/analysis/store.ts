@@ -16,8 +16,12 @@ export async function initAnalysisStore(dataDir?: string): Promise<void> {
     for (const item of items) {
       analyses.set(item.id, item);
     }
-  } catch {
-    // File doesn't exist yet or is invalid — start empty
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      // File doesn't exist yet — start empty
+    } else {
+      console.warn('vigil: failed to load analysis.json, starting with empty store:', err);
+    }
   }
 }
 

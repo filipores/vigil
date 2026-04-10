@@ -67,11 +67,6 @@ export async function fetchAnalysisResults(functionId?: string): Promise<Analysi
   return res.json();
 }
 
-export async function fetchAnalysisResult(id: string): Promise<AnalysisResult> {
-  const res = await fetch(`${API_BASE}/api/analysis/results/${id}`);
-  return res.json();
-}
-
 export async function triggerAnalysisRequest(
   functionIds: string[],
   taskName?: string,
@@ -81,6 +76,7 @@ export async function triggerAnalysisRequest(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ functionIds, taskName }),
   });
+  if (!res.ok) throw new Error('Failed to trigger analysis');
   return res.json();
 }
 
@@ -88,11 +84,7 @@ export async function stopAnalysisRequest(runId: string): Promise<{ success: boo
   const res = await fetch(`${API_BASE}/api/analysis/stop/${runId}`, {
     method: 'POST',
   });
-  return res.json();
-}
-
-export async function fetchAnalysisStatus(): Promise<{ running: string[]; maxConcurrent: number }> {
-  const res = await fetch(`${API_BASE}/api/analysis/status`);
+  if (!res.ok) throw new Error('Failed to stop analysis');
   return res.json();
 }
 
