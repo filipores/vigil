@@ -1,4 +1,6 @@
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { parseSync } from '@swc/core';
 import type { FunctionInfo, DataFlowEdge } from '@agent-monitor/types';
 import { generateId } from './utils.js';
@@ -334,6 +336,95 @@ function normalizeSpans(node: unknown, base: number): void {
   }
 }
 
+const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
+const RESOLVE_INDEX = RESOLVE_EXTENSIONS.map((ext) => `/index${ext}`);
+
+function resolveImportPath(fromFile: string, importSource: string): string | null {
+  // Only resolve relative imports — skip bare specifiers (node_modules packages)
+  if (!importSource.startsWith('.')) return null;
+
+  const dir = path.dirname(fromFile);
+  const resolved = path.resolve(dir, importSource);
+
+  // Try exact path first (already has extension)
+  if (existsSync(resolved) && !resolved.endsWith('/')) {
+    // Make sure it's a file, not a directory — if it has an extension it's likely a file
+    const ext = path.extname(resolved);
+    if (ext) return resolved;
+  }
+
+  // Try adding extensions
+  for (const ext of RESOLVE_EXTENSIONS) {
+    const candidate = resolved + ext;
+    if (existsSync(candidate)) return candidate;
+  }
+
+  // Try as directory with index file
+  for (const idx of RESOLVE_INDEX) {
+    const candidate = resolved + idx;
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+function formatSpecifiers(specifiers: AstNode[]): string {
+  if (!specifiers || specifiers.length === 0) return '*';
+
+  const names: string[] = [];
+  for (const spec of specifiers) {
+    switch (spec.type) {
+      case 'ImportDefaultSpecifier':
+        names.push(spec.local?.value ?? 'default');
+        break;
+      case 'ImportNamespaceSpecifier':
+        names.push(`* as ${spec.local?.value ?? '?'}`);
+        break;
+      case 'ImportSpecifier': {
+        const imported = spec.imported?.value ?? spec.local?.value;
+        const local = spec.local?.value;
+        if (imported && local && imported !== local) {
+          names.push(`${imported} as ${local}`);
+        } else {
+          names.push(imported ?? local ?? '?');
+        }
+        break;
+      }
+    }
+  }
+
+  if (names.length === 0) return '*';
+  // If there's a default import mixed with named imports, format accordingly
+  const defaultImport = specifiers.find((s) => s.type === 'ImportDefaultSpecifier');
+  const namedImports = names.filter((_, i) => specifiers[i]?.type !== 'ImportDefaultSpecifier');
+  if (defaultImport && namedImports.length > 0) {
+    return `${defaultImport.local?.value}, { ${namedImports.join(', ')} }`;
+  }
+  if (namedImports.length > 0 && !defaultImport) {
+    return `{ ${namedImports.join(', ')} }`;
+  }
+  return names.join(', ');
+}
+
+function extractImportEdges(body: AstNode[], filePath: string): DataFlowEdge[] {
+  const edges: DataFlowEdge[] = [];
+  for (const item of body) {
+    if (item.type === 'ImportDeclaration') {
+      const source = item.source?.value as string | undefined;
+      if (!source) continue;
+      const resolved = resolveImportPath(filePath, source);
+      if (!resolved) continue;
+      edges.push({
+        sourceId: filePath,
+        targetId: resolved,
+        edgeType: 'import',
+        label: formatSpecifiers(item.specifiers ?? []),
+      });
+    }
+  }
+  return edges;
+}
+
 export async function parseFile(filePath: string): Promise<{ functions: FunctionInfo[]; edges: DataFlowEdge[] }> {
   const source = await readFile(filePath, 'utf-8');
   const isTsx = filePath.endsWith('.tsx') || filePath.endsWith('.jsx');
@@ -354,7 +445,9 @@ export async function parseFile(filePath: string): Promise<{ functions: Function
     walkNode(node as AstNode, source, filePath, mapper, results);
   }
 
-  const edges = extractCallEdges(results, module.body as AstNode[], filePath);
+  const callEdges = extractCallEdges(results, module.body as AstNode[], filePath);
+  const importEdges = extractImportEdges(module.body as AstNode[], filePath);
+  const edges = [...callEdges, ...importEdges];
 
   return { functions: results, edges };
 }
