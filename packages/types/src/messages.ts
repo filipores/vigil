@@ -29,6 +29,7 @@ export interface WsStateSnapshot {
     functions: FunctionInfo[];
     files: FileChange[];
     edges: DataFlowEdge[];
+    analyses?: AnalysisResult[];
   };
 }
 
