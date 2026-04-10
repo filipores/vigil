@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { FunctionInfo } from '@agent-monitor/types';
+import { computeCommonRoot } from '@/components/FileTree/computeCommonRoot';
 
 export interface SearchPaletteProps {
   functions: FunctionInfo[];
@@ -49,6 +50,8 @@ export function SearchPalette({ functions, isOpen, onClose, onSelect }: SearchPa
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  const commonRoot = useMemo(() => computeCommonRoot(functions.map(f => f.filePath)), [functions]);
 
   const results = useMemo(() => {
     if (!query.trim()) return functions.slice(0, 20);
@@ -165,7 +168,7 @@ export function SearchPalette({ functions, isOpen, onClose, onSelect }: SearchPa
             >
               <div className="min-w-0 flex-1">
                 <div className="text-text font-medium truncate">{fn.name}</div>
-                <div className="text-text-secondary text-sm truncate">{fn.filePath}</div>
+                <div className="text-text-secondary text-sm truncate">{commonRoot ? fn.filePath.replace(commonRoot, '') : fn.filePath}</div>
               </div>
               <span className="text-xs px-1.5 py-0.5 rounded bg-surface text-text-dim shrink-0">
                 {fn.category}
