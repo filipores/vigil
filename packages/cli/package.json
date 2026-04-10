@@ -1,0 +1,21 @@
+{
+  "name": "@agent-monitor/cli",
+  "version": "0.1.0",
+  "description": "Real-time monitoring dashboard for AI-generated code",
+  "type": "module",
+  "bin": {
+    "vigil": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@agent-monitor/server": "*",
+    "@agent-monitor/sdk": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.0.0"
+  }
+}

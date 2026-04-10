@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {
-    "build": "npm run build -w packages/types && npm run build -w packages/sdk && npm run build -w packages/server && npm run build -w packages/dashboard",
+    "build": "npm run build -w packages/types && npm run build -w packages/sdk && npm run build -w packages/server && npm run build -w packages/dashboard && npm run build -w @agent-monitor/cli",
+    "vigil": "tsx packages/cli/src/cli.ts",
     "dev:types": "npm run dev -w packages/types",
     "dev:sdk": "npm run dev -w packages/sdk",
     "dev:server": "npm run dev -w packages/server",
