@@ -37,6 +37,24 @@
   let canvasMode = $state(false);
   let isCanvasAgentOpen = $state(false);
   let isSearchOpen = $state(false);
+  let sidebarWidth = $state(240);
+  let isResizingSidebar = $state(false);
+
+  function startSidebarResize(e: PointerEvent) {
+    isResizingSidebar = true;
+    const startX = e.clientX;
+    const startW = sidebarWidth;
+    const onMove = (ev: PointerEvent) => {
+      sidebarWidth = Math.max(180, Math.min(500, startW + ev.clientX - startX));
+    };
+    const onUp = () => {
+      isResizingSidebar = false;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  }
 
   // Store accessors
   let fnStore = $derived(getFunctionsStore());
@@ -277,7 +295,7 @@
   <!-- Main content -->
   <div class="flex flex-1 overflow-hidden">
     <!-- Sidebar -->
-    <aside class="w-56 border-r border-border-subtle overflow-y-auto shrink-0 flex flex-col">
+    <aside class="border-r border-border-subtle overflow-y-auto shrink-0 flex flex-col" style="width: {sidebarWidth}px">
       <SidebarTabs
         active={sidebarTab}
         onChange={(tab) => {
@@ -322,6 +340,13 @@
         />
       {/if}
     </aside>
+
+    <!-- Sidebar resize handle -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="w-1 cursor-col-resize hover:bg-signal/30 active:bg-signal/50 transition-colors shrink-0"
+      onpointerdown={startSidebarResize}
+    ></div>
 
     <!-- Main area -->
     <main class="flex-1 overflow-hidden relative flex flex-col">

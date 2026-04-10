@@ -74,33 +74,15 @@
         <div class="text-[11px] font-mono text-text-secondary bg-surface-raised/30 px-3 py-1.5 sticky top-0 z-10">
           {fileDiff.filePath}
         </div>
-        <pre class="text-[11px] font-mono leading-[1.6]">
-          <code>
-            {#each fileDiff.lines as line, i}
-              {@const style = lineStyles[line.type]}
-              {@const isTargetLine =
+        <pre class="text-[11px] font-mono leading-[1.6]"><code>{#each fileDiff.lines as line, i}{@const style = lineStyles[line.type]}{@const isTargetLine =
                 isTargetFile &&
                 activeFunction &&
                 line.newLineNo !== null &&
                 line.newLineNo >= activeFunction.line &&
-                line.newLineNo < activeFunction.line + 10}
-              <div
+                line.newLineNo < activeFunction.line + 10}<div
                 use:scrollTarget={isTargetLine}
                 class="flex {style.bg} {isTargetLine ? 'ring-1 ring-signal/30' : ''}"
-              >
-                <span class="w-6 text-right font-mono text-[10px] text-text-dim tabular-nums select-none shrink-0 px-1">
-                  {line.oldLineNo ?? ''}
-                </span>
-                <span class="w-6 text-right font-mono text-[10px] text-text-dim tabular-nums select-none shrink-0 px-1">
-                  {line.newLineNo ?? ''}
-                </span>
-                <span class="flex-1 px-2 {style.text} {line.type === 'header' ? 'text-[10px]' : ''}">
-                  {style.prefix}{line.content}
-                </span>
-              </div>
-            {/each}
-          </code>
-        </pre>
+              ><span class="w-6 text-right font-mono text-[10px] text-text-dim tabular-nums select-none shrink-0 px-1">{line.oldLineNo ?? ''}</span><span class="w-6 text-right font-mono text-[10px] text-text-dim tabular-nums select-none shrink-0 px-1">{line.newLineNo ?? ''}</span><span class="flex-1 px-2 {style.text} {line.type === 'header' ? 'text-[10px]' : ''}">{style.prefix}{line.content}</span></div>{/each}</code></pre>
       </div>
     {/each}
   </div>

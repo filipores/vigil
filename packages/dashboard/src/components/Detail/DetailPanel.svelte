@@ -90,7 +90,7 @@
 </script>
 
 {#if isOpen && fn}
-  <div class="w-80 border-l border-border-subtle bg-surface overflow-y-auto shrink-0 animate-slide-in">
+  <div class="w-96 border-l border-border-subtle bg-surface overflow-y-auto shrink-0 animate-slide-in">
     <div class="p-5 space-y-5">
       <!-- Header -->
       <div class="flex items-start justify-between gap-3">
