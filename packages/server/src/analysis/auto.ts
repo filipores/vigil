@@ -30,9 +30,7 @@ export function createAutoAnalysis(engine: AnalysisEngine): AutoAnalysis {
     const ids = [...new Set(buffer)];
     buffer = [];
 
-    engine.triggerAnalysis(ids, 'function-review').catch(() => {
-      // Engine rejected (concurrency limit or dedup) — drop the batch
-    });
+    engine.triggerAnalysis(ids, 'function-review').catch((err) => console.warn('vigil: auto-analysis failed:', err.message));
   }
 
   function onFunctionEvent(functionId: string): void {

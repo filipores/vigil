@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import type { WsMessage, AnalysisResult, RuleDefinition, FunctionInfo } from '@agent-monitor/types';
+import type { WsMessage, AnalysisResult, RuleDefinition, RuleViolation, FunctionInfo } from '@agent-monitor/types';
 import { getAllFunctions, getFunction, getAllEdges } from '../store.js';
 import { saveAnalysis, getAllAnalyses } from './store.js';
 import { startAnalysis } from './runner.js';
@@ -73,7 +73,7 @@ export class AnalysisEngine {
 
     // Run in background — don't await in the trigger call
     promise
-      .then(async (results) => {
+      .then(async ({ results, ruleViolations }) => {
         this.running.delete(runId);
         for (const result of results) {
           await saveAnalysis(result);
@@ -82,6 +82,26 @@ export class AnalysisEngine {
           type: 'analysis-completed',
           payload: { runId, results },
         });
+
+        // Broadcast LLM-detected rule violations
+        if (ruleViolations && ruleViolations.length > 0) {
+          const llmViolations: RuleViolation[] = ruleViolations
+            .filter((rv) => !rv.pass && rv.violation)
+            .map((rv) => ({
+              ruleId: rv.ruleId,
+              rule: rv.violation!,
+              functionId: functionIds[0],
+              filePath: functions[0].filePath,
+              severity: 'warning' as const,
+              description: rv.violation!,
+            }));
+          if (llmViolations.length > 0) {
+            this.broadcast({
+              type: 'rule-violation',
+              payload: { violations: llmViolations },
+            });
+          }
+        }
       })
       .catch((err: Error) => {
         this.running.delete(runId);

@@ -5,7 +5,7 @@
   import { initWebSocket, getWebSocketStore } from '$lib/stores/websocket.svelte';
   import { initGitCommits, getGitCommitsStore, selectCommit, clearCommit } from '$lib/stores/gitCommits.svelte';
   import { getCanvasLayoutStore, pinNode, applyCommand, clearLayout } from '$lib/stores/canvasLayout.svelte';
-  import { initAnalysis, getAnalysisStore, handleAnalysisMessage, triggerAnalysis, stopAnalysis, getAnalysesForFunction, getStreamingOutput } from '$lib/stores/analysis.svelte';
+  import { initAnalysis, getAnalysisStore, handleAnalysisMessage, hydrateFromSnapshot, triggerAnalysis, stopAnalysis, getAnalysesForFunction, getStreamingOutput } from '$lib/stores/analysis.svelte';
   import { initRules, getRulesStore, handleRulesMessage, updateRules, triggerCheck } from '$lib/stores/rules.svelte';
   import { getTimelineStore, handleTimelineMessage } from '$lib/stores/timeline.svelte';
   import { getGraphScopeStore, computeScope, setFocusMode, setCommitMode, setCategoryMode, clearScope } from '$lib/stores/graphScope.svelte';
@@ -155,6 +155,9 @@
       }
       if (msg.type === 'rule-violation') {
         handleRulesMessage(msg);
+      }
+      if (msg.type === 'state-snapshot' && msg.payload.analyses) {
+        hydrateFromSnapshot(msg.payload.analyses);
       }
     });
 

@@ -10,7 +10,7 @@
     rules: RuleDefinition[];
     violations: RuleViolation[];
     onUpdateRules: (rules: RuleDefinition[]) => void;
-    onTriggerCheck: () => void;
+    onTriggerCheck: () => void | Promise<void>;
   } = $props();
 
   let newRuleText = $state('');
@@ -51,9 +51,9 @@
   async function handleCheck() {
     isChecking = true;
     try {
-      onTriggerCheck();
+      await onTriggerCheck();
     } finally {
-      setTimeout(() => { isChecking = false; }, 1000);
+      isChecking = false;
     }
   }
 </script>

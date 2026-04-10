@@ -14,9 +14,20 @@ export interface RunAnalysisOpts {
   duplicateContext?: { existingFunction: FunctionInfo; similarity: number; reason: string };
 }
 
+export interface LLMRuleViolation {
+  ruleId: string;
+  pass: boolean;
+  violation?: string;
+}
+
+export interface AnalysisRunResult {
+  results: AnalysisResult[];
+  ruleViolations?: LLMRuleViolation[];
+}
+
 export interface AnalysisRun {
   child: ChildProcess;
-  promise: Promise<AnalysisResult[]>;
+  promise: Promise<AnalysisRunResult>;
 }
 
 export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
@@ -52,7 +63,7 @@ export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  const promise = new Promise<AnalysisResult[]>((resolve, reject) => {
+  const promise = new Promise<AnalysisRunResult>((resolve, reject) => {
     let stdout = '';
     let stderr = '';
 
@@ -98,7 +109,7 @@ export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
   return { child, promise };
 }
 
-function parseAnalysisOutput(raw: string, taskName: string): AnalysisResult[] {
+function parseAnalysisOutput(raw: string, taskName: string): AnalysisRunResult {
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(raw);
@@ -121,15 +132,22 @@ function parseAnalysisOutput(raw: string, taskName: string): AnalysisResult[] {
     concerns: Array<{ severity: string; description: string; line?: number }>;
     integrationNotes: string[];
   }>;
+  let ruleViolations: LLMRuleViolation[] | undefined;
 
   try {
     const jsonMatch = innerContent.match(/\{[\s\S]*"results"[\s\S]*\}/);
     if (jsonMatch) {
       const obj = JSON.parse(jsonMatch[0]);
       analysisResults = obj.results;
+      if (Array.isArray(obj.ruleViolations)) {
+        ruleViolations = obj.ruleViolations;
+      }
     } else {
       const obj = JSON.parse(innerContent) as Record<string, unknown>;
       analysisResults = obj.results as typeof analysisResults;
+      if (Array.isArray(obj.ruleViolations)) {
+        ruleViolations = obj.ruleViolations as LLMRuleViolation[];
+      }
     }
   } catch {
     throw new Error(`Failed to extract analysis results from output: ${innerContent.slice(0, 500)}`);
@@ -140,7 +158,7 @@ function parseAnalysisOutput(raw: string, taskName: string): AnalysisResult[] {
   }
 
   const now = Date.now();
-  return analysisResults.map((r) => ({
+  const results = analysisResults.map((r) => ({
     id: randomUUID(),
     functionId: r.functionId,
     taskName,
@@ -154,4 +172,6 @@ function parseAnalysisOutput(raw: string, taskName: string): AnalysisResult[] {
     integrationNotes: r.integrationNotes ?? [],
     timestamp: now,
   }));
+
+  return { results, ruleViolations };
 }

@@ -22,12 +22,10 @@ export function createRulesEngine(broadcast: (msg: WsMessage) => void) {
         violations.delete(filePath);
       }
 
-      if (found.length > 0) {
-        broadcast({
-          type: 'rule-violation',
-          payload: { violations: found },
-        });
-      }
+      broadcast({
+        type: 'rule-violation',
+        payload: { violations: this.getViolations() },
+      });
     },
 
     getLLMRules(): RuleDefinition[] {

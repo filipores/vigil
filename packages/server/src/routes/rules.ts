@@ -48,11 +48,5 @@ rulesRouter.post('/api/rules/check', (c) => {
 
   const violations = checkStructuralRules(rules, functions, edges);
 
-  // Also broadcast if engine is available
-  const engine = getRulesEngine();
-  if (engine && violations.length > 0) {
-    // The engine manages its own state; for a manual check we just return results
-  }
-
   return c.json({ violations });
 });

@@ -83,6 +83,12 @@ export function getStreamingOutput(runId: string): string {
   return streamingOutput.get(runId) ?? '';
 }
 
+export function hydrateFromSnapshot(results: AnalysisResult[]) {
+  const map = new Map<string, AnalysisResult>();
+  for (const r of results) map.set(r.id, r);
+  analyses = map;
+}
+
 export function getAnalysisStore() {
   return {
     get analyses() { return Array.from(analyses.values()); },
