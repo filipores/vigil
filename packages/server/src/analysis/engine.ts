@@ -17,6 +17,14 @@ export class AnalysisEngine {
   constructor(private broadcast: (msg: WsMessage) => void) {}
 
   async triggerAnalysis(functionIds: string[], taskName?: string): Promise<string> {
+    // Server-side deduplication: reject if any requested function is already being analyzed
+    for (const [runId, record] of this.running) {
+      const overlap = functionIds.filter((id) => record.functionIds.includes(id));
+      if (overlap.length > 0) {
+        throw new Error(`Function(s) ${overlap.join(', ')} already being analyzed in run ${runId}`);
+      }
+    }
+
     if (this.running.size >= this.maxConcurrent) {
       throw new Error(`Max concurrency reached (${this.maxConcurrent}). Stop a running analysis first.`);
     }

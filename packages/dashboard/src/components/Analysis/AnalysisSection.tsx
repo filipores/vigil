@@ -36,21 +36,35 @@ export function AnalysisSection({ analysisResults, activeRun, onTrigger, onStop 
         <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim">
           Integration Analysis
         </div>
-        {activeRun ? (
-          <button
-            onClick={() => onStop(activeRun.runId)}
-            className="px-2 py-1 text-[10px] font-medium text-warm border border-warm/30 rounded hover:bg-warm/10 transition-colors duration-150"
-          >
-            Stop
-          </button>
-        ) : (
-          <button
-            onClick={onTrigger}
-            className="px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150"
-          >
-            Run Analysis
-          </button>
-        )}
+        <div className="flex gap-1.5">
+          {activeRun && (activeRun.status === 'running' || activeRun.status === 'queued') ? (
+            <>
+              <button
+                disabled
+                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-medium text-signal/70 bg-signal/10 border border-signal/20 rounded cursor-not-allowed"
+              >
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-signal opacity-75" style={{ animation: 'signal-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-signal" />
+                </span>
+                Analyzing…
+              </button>
+              <button
+                onClick={() => onStop(activeRun.runId)}
+                className="px-2 py-1 text-[10px] font-medium text-warm border border-warm/30 rounded hover:bg-warm/10 transition-colors duration-150"
+              >
+                Stop
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onTrigger}
+              className="px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150"
+            >
+              Run Analysis
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Active run status */}

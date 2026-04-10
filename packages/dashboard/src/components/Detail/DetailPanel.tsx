@@ -16,8 +16,8 @@ interface DetailPanelProps {
   onSelectFunction: (id: string) => void;
   analysisResults?: AnalysisResult[];
   activeAnalysisRun?: AnalysisStatus;
-  onTriggerAnalysis?: (functionId: string) => void;
-  onStopAnalysis?: (runId: string) => void;
+  onTriggerAnalysis: (functionId: string) => void;
+  onStopAnalysis: (runId: string) => void;
   onDebugFunction?: (opts: { filePath: string; line: number; functionName: string }) => void;
   onDebugCallChain?: (chain: Array<{ filePath: string; line: number; name: string }>) => void;
 }
@@ -113,14 +113,6 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
               className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-secondary border border-border-subtle rounded hover:bg-surface-raised/50 hover:text-text transition-colors duration-150"
             >
               Debug Chain
-            </button>
-          )}
-          {onTriggerAnalysis && (
-            <button
-              onClick={() => onTriggerAnalysis(fn.id)}
-              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150"
-            >
-              Analyze
             </button>
           )}
         </div>
@@ -224,14 +216,12 @@ export function DetailPanel({ fn, isOpen, onClose, onAskAgent, onOpenEditor, edg
         </div>
 
         {/* Analysis */}
-        {onTriggerAnalysis && onStopAnalysis && (
-          <AnalysisSection
-            analysisResults={analysisResults ?? []}
-            activeRun={activeAnalysisRun}
-            onTrigger={() => onTriggerAnalysis(fn.id)}
-            onStop={onStopAnalysis}
-          />
-        )}
+        <AnalysisSection
+          analysisResults={analysisResults ?? []}
+          activeRun={activeAnalysisRun}
+          onTrigger={() => onTriggerAnalysis(fn.id)}
+          onStop={onStopAnalysis}
+        />
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">

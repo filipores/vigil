@@ -47,8 +47,17 @@ export function useAnalysis() {
   }, []);
 
   const triggerAnalysis = useCallback(
-    (functionIds: string[], taskName?: string) => triggerAnalysisRequest(functionIds, taskName),
-    [],
+    (functionIds: string[], taskName?: string) => {
+      // Client-side deduplication: skip if any requested function is already being analyzed
+      for (const [, run] of activeRuns) {
+        if (run.status !== 'running' && run.status !== 'queued') continue;
+        if (run.functionIds && functionIds.some((id) => run.functionIds!.includes(id))) {
+          return Promise.resolve({ runId: run.runId, status: run.status });
+        }
+      }
+      return triggerAnalysisRequest(functionIds, taskName);
+    },
+    [activeRuns],
   );
 
   const stopAnalysis = useCallback(
