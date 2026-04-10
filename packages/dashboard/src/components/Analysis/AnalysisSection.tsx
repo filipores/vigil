@@ -1,11 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import type { AnalysisResult, AnalysisStatus } from '@agent-monitor/types';
+
+const TASK_OPTIONS = [
+  { value: 'function-review', label: 'Code Review' },
+  { value: 'change-summary', label: 'Change Summary' },
+  { value: 'data-flow-trace', label: 'Data Flow Trace' },
+  { value: 'drift-detection', label: 'Drift Detection' },
+] as const;
 
 interface AnalysisSectionProps {
   analysisResults: AnalysisResult[];
   activeRun: AnalysisStatus | undefined;
-  onTrigger: () => void;
+  onTrigger: (taskName?: string) => void;
   onStop: (runId: string) => void;
 }
 
@@ -21,12 +29,25 @@ const SEVERITY_DOT: Record<string, string> = {
   critical: 'bg-red-400',
 };
 
+const TASK_BADGE_CLASS: Record<string, string> = {
+  'function-review': 'bg-signal/10 text-signal',
+  'change-summary': 'bg-warm/10 text-warm',
+  'data-flow-trace': 'bg-purple-500/10 text-purple-400',
+  'drift-detection': 'bg-red-500/10 text-red-400',
+};
+
 function formatTimestamp(ts: number): string {
   const d = new Date(ts);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function taskLabel(taskName: string): string {
+  const found = TASK_OPTIONS.find((o) => o.value === taskName);
+  return found ? found.label : taskName;
+}
+
 export function AnalysisSection({ analysisResults, activeRun, onTrigger, onStop }: AnalysisSectionProps) {
+  const [selectedTask, setSelectedTask] = useState('function-review');
   const sorted = [...analysisResults].sort((a, b) => b.timestamp - a.timestamp);
 
   return (
@@ -36,7 +57,7 @@ export function AnalysisSection({ analysisResults, activeRun, onTrigger, onStop 
         <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-text-dim">
           Integration Analysis
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1.5">
           {activeRun && (activeRun.status === 'running' || activeRun.status === 'queued') ? (
             <>
               <button
@@ -57,12 +78,28 @@ export function AnalysisSection({ analysisResults, activeRun, onTrigger, onStop 
               </button>
             </>
           ) : (
-            <button
-              onClick={onTrigger}
-              className="px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150"
-            >
-              Run Analysis
-            </button>
+            <>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[10px] text-text-secondary">Task</label>
+                <select
+                  value={selectedTask}
+                  onChange={(e) => setSelectedTask(e.target.value)}
+                  className="bg-surface text-text border border-border-subtle rounded-md text-sm px-2 py-1 outline-none focus:border-signal/40 transition-colors"
+                >
+                  {TASK_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => onTrigger(selectedTask)}
+                className="px-2 py-1 text-[10px] font-medium text-void bg-signal rounded hover:brightness-110 transition-all duration-150 self-end"
+              >
+                Run Analysis
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -91,10 +128,14 @@ export function AnalysisSection({ analysisResults, activeRun, onTrigger, onStop 
           key={result.id}
           className={`${idx > 0 ? 'mt-3 pt-3 border-t border-border-subtle' : ''}`}
         >
-          {/* Timestamp + task */}
-          <div className="flex items-baseline gap-2 mb-1.5">
+          {/* Timestamp + task badge */}
+          <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] text-text-dim tabular-nums">{formatTimestamp(result.timestamp)}</span>
-            <span className="text-[10px] text-text-secondary">{result.taskName}</span>
+            <span
+              className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${TASK_BADGE_CLASS[result.taskName] ?? 'bg-surface-raised text-text-secondary'}`}
+            >
+              {taskLabel(result.taskName)}
+            </span>
           </div>
 
           {/* Summary */}
