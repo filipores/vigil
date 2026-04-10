@@ -72,6 +72,10 @@
     graph?.destroy();
   });
 
+  function handleResetZoom() {
+    graph?.resetZoom();
+  }
+
   $effect(() => {
     if (graph) {
       graph.updateCallbacks(onSelectFunction, canvasMode, onPinNode);
@@ -89,6 +93,14 @@
 
 <div bind:this={containerEl} class="w-full h-full relative bg-void">
   <canvas bind:this={canvasEl} class="absolute inset-0"></canvas>
+  {#if functions.length > 0}
+    <button
+      onclick={handleResetZoom}
+      class="absolute bottom-3 right-3 px-2 py-1 text-[10px] font-medium text-text-secondary bg-surface-raised rounded border border-border-subtle hover:text-text hover:bg-surface-bright transition-colors cursor-pointer"
+    >
+      Reset View
+    </button>
+  {/if}
   {#if functions.length > 300}
     <div class="absolute top-2 left-1/2 -translate-x-1/2 text-sm text-text-secondary pointer-events-none">
       {functions.length} functions tracked — showing graph. Use filters or focus mode to scope.
