@@ -17,5 +17,7 @@ export type {
   WsAnalysisProgress,
   WsAnalysisCompleted,
   WsAnalysisFailed,
+  WsRuleViolation,
   WsMessage,
 } from './messages.js';
+export type { RuleDefinition, RuleViolation } from './rules.js';

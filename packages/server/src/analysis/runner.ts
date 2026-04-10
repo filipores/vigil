@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import type { FunctionInfo, DataFlowEdge, AnalysisResult } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge, AnalysisResult, RuleDefinition } from '@agent-monitor/types';
 import { buildAnalysisPrompt } from './prompts.js';
 
 export interface RunAnalysisOpts {
@@ -10,6 +10,7 @@ export interface RunAnalysisOpts {
   projectRoot: string;
   taskName: string;
   onProgress?: (chunk: string) => void;
+  rules?: RuleDefinition[];
 }
 
 export interface AnalysisRun {
@@ -18,7 +19,7 @@ export interface AnalysisRun {
 }
 
 export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
-  const { functions, edges, allFunctions, projectRoot, taskName, onProgress } = opts;
+  const { functions, edges, allFunctions, projectRoot, taskName, onProgress, rules } = opts;
 
   // Resolve 1-hop neighbors
   const targetIds = new Set(functions.map((f) => f.id));
@@ -41,6 +42,7 @@ export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
     neighbors,
     edges: relevantEdges,
     taskName,
+    rules,
   });
 
   const child = spawn('claude', ['-p', prompt, '--output-format', 'json'], {

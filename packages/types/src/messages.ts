@@ -2,6 +2,7 @@ import type { FunctionInfo } from './function.js';
 import type { FileChange } from './file.js';
 import type { DataFlowEdge } from './dataflow.js';
 import type { AnalysisStatus, AnalysisResult } from './analysis.js';
+import type { RuleViolation } from './rules.js';
 
 export interface WsFunctionDiscovered {
   type: 'function-discovered';
@@ -61,6 +62,11 @@ export interface WsAnalysisFailed {
   payload: { runId: string; error: string };
 }
 
+export interface WsRuleViolation {
+  type: 'rule-violation';
+  payload: { violations: RuleViolation[] };
+}
+
 export type WsMessage =
   | WsFunctionDiscovered
   | WsFunctionUpdated
@@ -71,4 +77,5 @@ export type WsMessage =
   | WsAnalysisStarted
   | WsAnalysisProgress
   | WsAnalysisCompleted
-  | WsAnalysisFailed;
+  | WsAnalysisFailed
+  | WsRuleViolation;

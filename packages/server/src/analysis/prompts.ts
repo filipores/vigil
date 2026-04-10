@@ -1,12 +1,14 @@
-import type { FunctionInfo, DataFlowEdge } from '@agent-monitor/types';
+import type { FunctionInfo, DataFlowEdge, RuleDefinition } from '@agent-monitor/types';
+import { buildRulesPrompt } from '../rules/llm-checker.js';
 
 export function buildAnalysisPrompt(opts: {
   targetFunctions: FunctionInfo[];
   neighbors: FunctionInfo[];
   edges: DataFlowEdge[];
   taskName: string;
+  rules?: RuleDefinition[];
 }): string {
-  const { targetFunctions, neighbors, edges, taskName } = opts;
+  const { targetFunctions, neighbors, edges, taskName, rules } = opts;
 
   const taskInstructions = getTaskInstructions(taskName);
 
@@ -75,7 +77,7 @@ Respond with ONLY valid JSON matching this exact shape (no markdown, no explanat
   ]
 }
 
-Provide one entry in "results" for each target function listed above. The functionId must match exactly.`;
+Provide one entry in "results" for each target function listed above. The functionId must match exactly.${rules && rules.length > 0 ? '\n' + buildRulesPrompt(rules) : ''}`;
 }
 
 function getTaskInstructions(taskName: string): string {

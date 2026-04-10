@@ -7,6 +7,9 @@ import { getAutoAnalysis } from './analysis/autoInstance.js';
 import { AnalysisEngine, getAllAnalyses, setAnalysisEngine } from './analysis/index.js';
 import { createAutoAnalysis } from './analysis/auto.js';
 import { setAutoAnalysis } from './analysis/autoInstance.js';
+import { initRulesLoader } from './rules/loader.js';
+import { createRulesEngine } from './rules/engine.js';
+import { setRulesEngine, getRulesEngine } from './rules/instance.js';
 
 type ClientType = 'sdk' | 'dashboard';
 
@@ -55,6 +58,11 @@ export function setupWebSocket(app: Hono) {
   const autoAnalysis = createAutoAnalysis(engine);
   setAutoAnalysis(autoAnalysis);
 
+  // Initialize rules engine
+  initRulesLoader();
+  const rulesEngine = createRulesEngine(broadcast);
+  setRulesEngine(rulesEngine);
+
   return { injectWebSocket, wsHandler };
 }
 
@@ -73,6 +81,7 @@ function handleSdkMessage(msg: WsMessage): void {
       break;
     case 'edges-updated':
       upsertFileEdges(msg.payload.filePath, msg.payload.edges);
+      getRulesEngine()?.onEdgesUpdated(msg.payload.filePath, msg.payload.edges);
       break;
   }
   broadcast(msg);

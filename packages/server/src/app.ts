@@ -8,6 +8,7 @@ import { agentRouter } from './routes/agent.js';
 import { gitRouter } from './routes/git.js';
 import { canvasRouter } from './routes/canvas.js';
 import { analysisRouter } from './routes/analysis.js';
+import { rulesRouter } from './routes/rules.js';
 
 const app = new Hono();
 
@@ -22,6 +23,7 @@ app.route('/', agentRouter);
 app.route('/', gitRouter);
 app.route('/', canvasRouter);
 app.route('/', analysisRouter);
+app.route('/', rulesRouter);
 app.get('/ws', wsHandler);
 
 export { app, injectWebSocket };

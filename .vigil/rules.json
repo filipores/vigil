@@ -1,0 +1,20 @@
+[
+  {
+    "id": "no-direct-db",
+    "rule": "Route handlers must not import from db/ directly — use the service layer",
+    "severity": "critical",
+    "enabled": true,
+    "structural": {
+      "from": { "category": "handler" },
+      "to": { "pathContains": "db/" },
+      "edge": "import",
+      "action": "deny"
+    }
+  },
+  {
+    "id": "hooks-cleanup",
+    "rule": "All React hooks must have cleanup logic in their effect return",
+    "severity": "warning",
+    "enabled": true
+  }
+]
