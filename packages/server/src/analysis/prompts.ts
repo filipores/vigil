@@ -7,8 +7,9 @@ export function buildAnalysisPrompt(opts: {
   edges: DataFlowEdge[];
   taskName: string;
   rules?: RuleDefinition[];
+  duplicateContext?: { existingFunction: FunctionInfo; similarity: number; reason: string };
 }): string {
-  const { targetFunctions, neighbors, edges, taskName, rules } = opts;
+  const { targetFunctions, neighbors, edges, taskName, rules, duplicateContext } = opts;
 
   const taskInstructions = getTaskInstructions(taskName);
 
@@ -77,7 +78,30 @@ Respond with ONLY valid JSON matching this exact shape (no markdown, no explanat
   ]
 }
 
-Provide one entry in "results" for each target function listed above. The functionId must match exactly.${rules && rules.length > 0 ? '\n' + buildRulesPrompt(rules) : ''}`;
+Provide one entry in "results" for each target function listed above. The functionId must match exactly.${rules && rules.length > 0 ? '\n' + buildRulesPrompt(rules) : ''}${duplicateContext ? buildDuplicateContextSection(duplicateContext) : ''}`;
+}
+
+function buildDuplicateContextSection(ctx: { existingFunction: FunctionInfo; similarity: number; reason: string }): string {
+  const fn = ctx.existingFunction;
+  const paramList = fn.params.map((p) => `${p.name}: ${p.type}`).join(', ') || 'none';
+  const lines = [
+    '',
+    '## Suspected Duplicate',
+    '',
+    `Heuristic matching found a ${Math.round(ctx.similarity * 100)}% similarity match (${ctx.reason}).`,
+    '',
+    `### Existing function: ${fn.name} (${fn.filePath}:${fn.line})`,
+    `Category: ${fn.category}`,
+    `Params: ${paramList}`,
+    `Return type: ${fn.returnType}`,
+    'Source:',
+    '```',
+    fn.sourcePreview,
+    '```',
+    '',
+    'Compare the target function against this existing function and determine whether it is an exact duplicate, a partial overlap, or a false positive.',
+  ];
+  return '\n' + lines.join('\n');
 }
 
 function getTaskInstructions(taskName: string): string {
@@ -102,6 +126,16 @@ Severity guide for concerns:
 - \`info\`: minor style inconsistency
 
 Be thorough in comparing against every neighbor function provided.`;
+
+    case 'duplicate-check':
+      return `You are checking whether a newly discovered function is a duplicate of an existing function. A "Suspected Duplicate" section is provided below with the existing function's source code.
+
+Compare the two functions and classify the relationship as one of:
+- **Exact duplicate**: Same logic under a different name. Flag as \`critical\` severity.
+- **Partial overlap**: Significant shared logic but meaningful differences (extra params, different edge cases, broader scope). Flag as \`warning\` severity.
+- **False positive**: The functions are superficially similar but serve different purposes. Flag as \`info\` severity with a note explaining why they are distinct.
+
+Be precise. Include the existing function's name and file path in each concern description so the developer knows which function to compare against.`;
 
     case 'function-review':
     default:

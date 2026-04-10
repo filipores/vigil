@@ -6,3 +6,6 @@ export { getAnalysisEngine, setAnalysisEngine } from './engineInstance.js';
 export { createAutoAnalysis } from './auto.js';
 export type { AutoAnalysis } from './auto.js';
 export { getAutoAnalysis, setAutoAnalysis } from './autoInstance.js';
+export { createDuplicateSentinel } from './duplicates.js';
+export type { DuplicateMatch, DuplicateSentinel } from './duplicates.js';
+export { getDuplicateSentinel, setDuplicateSentinel } from './duplicateInstance.js';

@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import type { WsMessage, AnalysisResult, RuleDefinition } from '@agent-monitor/types';
+import type { WsMessage, AnalysisResult, RuleDefinition, FunctionInfo } from '@agent-monitor/types';
 import { getAllFunctions, getFunction, getAllEdges } from '../store.js';
 import { saveAnalysis, getAllAnalyses } from './store.js';
 import { startAnalysis } from './runner.js';
@@ -16,7 +16,7 @@ export class AnalysisEngine {
 
   constructor(private broadcast: (msg: WsMessage) => void) {}
 
-  async triggerAnalysis(functionIds: string[], taskName?: string, rules?: RuleDefinition[]): Promise<string> {
+  async triggerAnalysis(functionIds: string[], taskName?: string, rules?: RuleDefinition[], duplicateContext?: { existingFunction: FunctionInfo; similarity: number; reason: string }): Promise<string> {
     // Server-side deduplication: reject if any requested function is already being analyzed
     for (const [runId, record] of this.running) {
       const overlap = functionIds.filter((id) => record.functionIds.includes(id));
@@ -61,6 +61,7 @@ export class AnalysisEngine {
       taskName: task,
       onProgress,
       rules,
+      duplicateContext,
     });
 
     this.running.set(runId, { child, functionIds });

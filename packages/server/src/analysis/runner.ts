@@ -11,6 +11,7 @@ export interface RunAnalysisOpts {
   taskName: string;
   onProgress?: (chunk: string) => void;
   rules?: RuleDefinition[];
+  duplicateContext?: { existingFunction: FunctionInfo; similarity: number; reason: string };
 }
 
 export interface AnalysisRun {
@@ -19,7 +20,7 @@ export interface AnalysisRun {
 }
 
 export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
-  const { functions, edges, allFunctions, projectRoot, taskName, onProgress, rules } = opts;
+  const { functions, edges, allFunctions, projectRoot, taskName, onProgress, rules, duplicateContext } = opts;
 
   // Resolve 1-hop neighbors
   const targetIds = new Set(functions.map((f) => f.id));
@@ -43,6 +44,7 @@ export function startAnalysis(opts: RunAnalysisOpts): AnalysisRun {
     edges: relevantEdges,
     taskName,
     rules,
+    duplicateContext,
   });
 
   const child = spawn('claude', ['-p', prompt, '--output-format', 'json'], {

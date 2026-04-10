@@ -7,6 +7,8 @@ import { getAutoAnalysis } from './analysis/autoInstance.js';
 import { AnalysisEngine, getAllAnalyses, setAnalysisEngine } from './analysis/index.js';
 import { createAutoAnalysis } from './analysis/auto.js';
 import { setAutoAnalysis } from './analysis/autoInstance.js';
+import { createDuplicateSentinel } from './analysis/duplicates.js';
+import { getDuplicateSentinel, setDuplicateSentinel } from './analysis/duplicateInstance.js';
 import { initRulesLoader } from './rules/loader.js';
 import { createRulesEngine } from './rules/engine.js';
 import { setRulesEngine, getRulesEngine } from './rules/instance.js';
@@ -58,6 +60,10 @@ export function setupWebSocket(app: Hono) {
   const autoAnalysis = createAutoAnalysis(engine);
   setAutoAnalysis(autoAnalysis);
 
+  // Set up duplicate sentinel
+  const duplicateSentinel = createDuplicateSentinel(engine, broadcast);
+  setDuplicateSentinel(duplicateSentinel);
+
   // Initialize rules engine
   initRulesLoader();
   const rulesEngine = createRulesEngine(broadcast);
@@ -69,6 +75,10 @@ export function setupWebSocket(app: Hono) {
 function handleSdkMessage(msg: WsMessage): void {
   switch (msg.type) {
     case 'function-discovered':
+      upsertFunction(msg.payload);
+      getAutoAnalysis()?.onFunctionEvent(msg.payload.id);
+      getDuplicateSentinel()?.onFunctionDiscovered(msg.payload.id);
+      break;
     case 'function-updated':
       upsertFunction(msg.payload);
       getAutoAnalysis()?.onFunctionEvent(msg.payload.id);
