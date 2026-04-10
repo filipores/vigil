@@ -19,6 +19,7 @@ import { DiffView } from '@/components/Commits/DiffView';
 import { DetailPanel } from '@/components/Detail/DetailPanel';
 import { AgentModal } from '@/components/Agent/AgentModal';
 import { CanvasAgentPanel } from '@/components/Agent/CanvasAgentPanel';
+import { SearchPalette } from '@/components/Search/SearchPalette';
 import { openInEditor, launchDebugSession } from '@/lib/api';
 
 const EMPTY_CANVAS_LAYOUT: CanvasLayout = { version: 1, positions: [], groups: [], annotations: [] };
@@ -52,6 +53,19 @@ export function WorkspaceLayout() {
   const [selectedCategory, setSelectedCategory] = useState<FunctionCategory | null>(null);
   const [canvasMode, setCanvasMode] = useState(false);
   const [isCanvasAgentOpen, setIsCanvasAgentOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Cmd+K / Ctrl+K to open search palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const {
     layout,
@@ -193,6 +207,16 @@ export function WorkspaceLayout() {
   const handleDebugFunction = useCallback(
     (opts: { filePath: string; line: number; functionName: string }) => launchDebugSession(opts),
     [],
+  );
+
+  const handleSearchSelect = useCallback(
+    (functionId: string) => {
+      selectFunction(functionId);
+      setIsDetailOpen(true);
+      setFocusMode(functionId);
+      setIsSearchOpen(false);
+    },
+    [selectFunction, setFocusMode],
   );
 
   const handleDebugCallChain = useCallback(
@@ -382,6 +406,14 @@ export function WorkspaceLayout() {
           context={agentContext}
         />
       )}
+
+      {/* Search palette (Cmd+K) */}
+      <SearchPalette
+        functions={functions}
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onSelect={handleSearchSelect}
+      />
     </div>
   );
 }
