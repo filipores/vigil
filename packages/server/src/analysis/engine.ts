@@ -58,7 +58,7 @@ export class AnalysisEngine {
 
     this.broadcast({
       type: 'analysis-progress',
-      payload: { runId, status: 'running', progress: `Analyzing ${functions.length} function(s)...` },
+      payload: { runId, status: 'running', progress: `Analyzing ${functions.length} function(s)...`, functionIds },
     });
 
     // Run in background — don't await in the trigger call

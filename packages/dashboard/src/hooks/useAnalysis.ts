@@ -21,9 +21,18 @@ export function useAnalysis() {
   const handleAnalysisMessage = useCallback((msg: WsMessage) => {
     switch (msg.type) {
       case 'analysis-started':
-      case 'analysis-progress':
-        setActiveRuns((prev) => new Map(prev).set(msg.payload.runId, msg.payload));
+      case 'analysis-progress': {
+        const incoming = msg.payload;
+        setActiveRuns((prev) => {
+          const existing = prev.get(incoming.runId);
+          return new Map(prev).set(incoming.runId, {
+            ...existing,
+            ...incoming,
+            functionIds: incoming.functionIds ?? existing?.functionIds,
+          });
+        });
         break;
+      }
       case 'analysis-completed':
         setActiveRuns((prev) => {
           const next = new Map(prev);
