@@ -121,8 +121,8 @@ function parseAnalysisOutput(raw: string, taskName: string): AnalysisResult[] {
       const obj = JSON.parse(jsonMatch[0]);
       analysisResults = obj.results;
     } else {
-      const obj = typeof innerContent === 'string' ? JSON.parse(innerContent) : parsed;
-      analysisResults = (obj as Record<string, unknown>).results as typeof analysisResults;
+      const obj = JSON.parse(innerContent) as Record<string, unknown>;
+      analysisResults = obj.results as typeof analysisResults;
     }
   } catch {
     throw new Error(`Failed to extract analysis results from output: ${innerContent.slice(0, 500)}`);

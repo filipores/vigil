@@ -21,8 +21,6 @@ export function useAnalysis() {
   const handleAnalysisMessage = useCallback((msg: WsMessage) => {
     switch (msg.type) {
       case 'analysis-started':
-        setActiveRuns((prev) => new Map(prev).set(msg.payload.runId, msg.payload));
-        break;
       case 'analysis-progress':
         setActiveRuns((prev) => new Map(prev).set(msg.payload.runId, msg.payload));
         break;
@@ -48,13 +46,15 @@ export function useAnalysis() {
     }
   }, []);
 
-  const triggerAnalysis = useCallback(async (functionIds: string[], taskName?: string) => {
-    return await triggerAnalysisRequest(functionIds, taskName);
-  }, []);
+  const triggerAnalysis = useCallback(
+    (functionIds: string[], taskName?: string) => triggerAnalysisRequest(functionIds, taskName),
+    [],
+  );
 
-  const stopAnalysis = useCallback(async (runId: string) => {
-    return await stopAnalysisRequest(runId);
-  }, []);
+  const stopAnalysis = useCallback(
+    (runId: string) => stopAnalysisRequest(runId),
+    [],
+  );
 
   const getAnalysesForFunction = useCallback(
     (functionId: string): AnalysisResult[] => {

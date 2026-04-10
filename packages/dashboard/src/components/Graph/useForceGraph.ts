@@ -282,11 +282,13 @@ export function useForceGraph({
               const hasConcerns = concerns.length > 0;
               let maxSeverity: string | undefined;
               if (hasConcerns) {
-                maxSeverity = concerns.some((c) => c.severity === 'critical')
-                  ? 'critical'
-                  : concerns.some((c) => c.severity === 'warning')
-                    ? 'warning'
-                    : 'info';
+                if (concerns.some((c) => c.severity === 'critical')) {
+                  maxSeverity = 'critical';
+                } else if (concerns.some((c) => c.severity === 'warning')) {
+                  maxSeverity = 'warning';
+                } else {
+                  maxSeverity = 'info';
+                }
               }
               drawAnalysisBadge(ctx, x, y, R, { hasAnalysis: true, hasConcerns, maxSeverity });
             }

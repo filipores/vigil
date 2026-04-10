@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import type { AgentContext, FunctionCategory, CanvasLayout, AnalysisResult } from '@agent-monitor/types';
+import type { AgentContext, FunctionCategory, CanvasLayout, AnalysisResult, WsMessage } from '@agent-monitor/types';
 import { useFunctions } from '@/hooks/useFunctions';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useGitCommits } from '@/hooks/useGitCommits';
@@ -34,7 +34,7 @@ export function WorkspaceLayout() {
   const { connected } = useWebSocket({
     url: WS_URL,
     onMessage: useCallback(
-      (msg: import('@agent-monitor/types').WsMessage) => {
+      (msg: WsMessage) => {
         handleFunctionsMessage(msg);
         if (msg.type.startsWith('analysis-')) {
           handleAnalysisMessage(msg);
@@ -131,23 +131,12 @@ export function WorkspaceLayout() {
   );
 
   const handleTriggerAnalysis = useCallback(
-    (functionId: string) => {
-      triggerAnalysis([functionId]);
-    },
+    (functionId: string) => triggerAnalysis([functionId]),
     [triggerAnalysis],
   );
 
-  const handleStopAnalysis = useCallback(
-    (runId: string) => {
-      stopAnalysis(runId);
-    },
-    [stopAnalysis],
-  );
-
   const handleDebugFunction = useCallback(
-    (opts: { filePath: string; line: number; functionName: string }) => {
-      launchDebugSession(opts);
-    },
+    (opts: { filePath: string; line: number; functionName: string }) => launchDebugSession(opts),
     [],
   );
 
@@ -297,10 +286,10 @@ export function WorkspaceLayout() {
             edges={edges}
             allFunctions={functions}
             onSelectFunction={handleSelectFunction}
-            analysisResults={selectedFunction ? getAnalysesForFunction(selectedFunction.id) : []}
+            analysisResults={getAnalysesForFunction(selectedFunction.id)}
             activeAnalysisRun={activeAnalysisRunForSelected}
             onTriggerAnalysis={handleTriggerAnalysis}
-            onStopAnalysis={handleStopAnalysis}
+            onStopAnalysis={stopAnalysis}
             onDebugFunction={handleDebugFunction}
             onDebugCallChain={handleDebugCallChain}
           />

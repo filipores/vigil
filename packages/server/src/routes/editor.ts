@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { spawn } from 'node:child_process';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
-import { join, dirname, resolve, isAbsolute } from 'node:path';
+import { join, dirname, resolve as resolvePath, isAbsolute } from 'node:path';
 import { detectRuntime, generateLaunchConfig, generateCallChainConfig } from '../debug/index.js';
 
 export const editorRouter = new Hono();
@@ -59,7 +59,7 @@ editorRouter.post('/api/editor/debug', async (c) => {
     }
 
     // Validate filePath is within projectRoot
-    const resolvedFile = resolve(projectRoot, filePath);
+    const resolvedFile = resolvePath(projectRoot, filePath);
     if (!resolvedFile.startsWith(projectRoot + '/') && resolvedFile !== projectRoot) {
       return c.json({ error: 'filePath must be within projectRoot' }, 400);
     }

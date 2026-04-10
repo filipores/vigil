@@ -31,8 +31,6 @@ export function useFunctions() {
   const handleMessage = useCallback((msg: WsMessage) => {
     switch (msg.type) {
       case 'function-discovered':
-        setFunctionsMap((prev) => new Map(prev).set(msg.payload.id, msg.payload));
-        break;
       case 'function-updated':
         setFunctionsMap((prev) => new Map(prev).set(msg.payload.id, msg.payload));
         break;
